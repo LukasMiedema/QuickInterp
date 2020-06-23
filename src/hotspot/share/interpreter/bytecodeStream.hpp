@@ -104,7 +104,7 @@ class BaseBytecodeStream: StackObj {
   int             dest_w() const                 { return bci() + bytecode().get_offset_s4(raw_code()); }
 
   // One-byte indices.
-  int             get_index_u1() const           { assert_raw_index_size(1); return *(jubyte*)(bcp()+1); }
+  int             get_index_u1() const           { assert_raw_index_size(1); return *(jubyte*)(bcp()+2); }
 
  protected:
   void assert_raw_index_size(int size) const NOT_DEBUG_RETURN;
@@ -199,7 +199,7 @@ class BytecodeStream: public BaseBytecodeStream {
         _is_wide      = false;
         // check for special (uncommon) cases
         if (code == Bytecodes::_wide) {
-          raw_code = (Bytecodes::Code)bcp[1];
+          raw_code = (Bytecodes::Code) READ_BYTECODE(bcp + 2);
           code = raw_code;  // wide BCs are always Java-normal
           _is_wide = true;
         }

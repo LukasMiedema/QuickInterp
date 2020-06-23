@@ -43,6 +43,7 @@
 #define AGENT_ONLOAD_SYMBOLS    {"Agent_OnLoad"}
 #define AGENT_ONUNLOAD_SYMBOLS  {"Agent_OnUnload"}
 #define AGENT_ONATTACH_SYMBOLS  {"Agent_OnAttach"}
+#define SI_ONLOAD_SYMBOLS       {"init_codestretcher_agent"}
 
 #define JNI_LIB_PREFIX "lib"
 #ifdef __APPLE__

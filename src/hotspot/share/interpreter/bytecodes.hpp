@@ -368,7 +368,7 @@ class Bytecodes: AllStatic {
   // memory.
   static Code       code_at(const Method* method, address bcp) {
     assert(method == NULL || check_method(method, bcp), "bcp must point into method");
-    Code code = cast(*bcp);
+    Code code = cast(READ_BYTECODE(bcp));
     assert(code != _breakpoint || method != NULL, "need Method* to decode breakpoint");
     return (code != _breakpoint) ? code : non_breakpoint_code_at(method, bcp);
   }
@@ -377,10 +377,10 @@ class Bytecodes: AllStatic {
   }
 
   // Fetch a bytecode or a breakpoint:
-  static Code       code_or_bp_at(address bcp)    { return (Code)cast(*bcp); }
+  static Code       code_or_bp_at(address bcp)    { return (Code)cast(READ_BYTECODE(bcp)); }
 
   static Code       code_at(Method* method, int bci);
-  static bool       is_active_breakpoint_at(address bcp) { return (Code)*bcp == _breakpoint; }
+  static bool       is_active_breakpoint_at(address bcp) { return (Code)READ_BYTECODE(bcp) == _breakpoint; }
 
   // find a bytecode, behind a breakpoint if necessary:
   static Code       non_breakpoint_code_at(const Method* method, address bcp);

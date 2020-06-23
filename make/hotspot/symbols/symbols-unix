@@ -21,6 +21,7 @@
 # questions.
 #
 
+Agent_OnLoad_codestretcher
 JVM_ActiveProcessorCount
 JVM_AreNestMates
 JVM_ArrayCopy

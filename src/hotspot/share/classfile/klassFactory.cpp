@@ -200,15 +200,13 @@ InstanceKlass* KlassFactory::create_from_stream(ClassFileStream* stream,
   // increment counter
   THREAD->statistical_info().incr_define_class_count();
 
-  // Skip this processing for VM anonymous classes
-  if (host_klass == NULL) {
-    stream = check_class_file_load_hook(stream,
+  // JVMTI Shortcode conversion: always do this, even for anonymous classes
+  stream = check_class_file_load_hook(stream,
                                         name,
                                         loader_data,
                                         protection_domain,
                                         &cached_class_file,
                                         CHECK_NULL);
-  }
 
   ClassFileParser parser(stream,
                          name,

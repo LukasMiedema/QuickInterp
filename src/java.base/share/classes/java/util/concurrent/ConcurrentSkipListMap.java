@@ -1713,7 +1713,7 @@ public class ConcurrentSkipListMap<K,V> extends AbstractMap<K,V>
             Comparator<? super K> cmp = comparator;
             @SuppressWarnings("unchecked")
             Iterator<Map.Entry<?,?>> it =
-                (Iterator<Map.Entry<?,?>>)m.entrySet().iterator();
+                (Iterator<Map.Entry<?,?>>) (Iterator) m.entrySet().iterator();
             if (m instanceof SortedMap &&
                 ((SortedMap<?,?>)m).comparator() == cmp) {
                 Node<K,V> b, n;

@@ -195,7 +195,7 @@ void vframeArrayElement::unpack_on_stack(int caller_actual_parameters,
     pc  = Interpreter::deopt_continue_after_entry(method(), bcp, callee_parameters, is_top_frame);
     use_next_mdp = true;
   }
-  assert(Bytecodes::is_defined(*bcp), "must be a valid bytecode");
+  assert(Bytecodes::is_defined(READ_BYTECODE(bcp)), "must be a valid bytecode");
 
   // Monitorenter and pending exceptions:
   //
@@ -211,10 +211,10 @@ void vframeArrayElement::unpack_on_stack(int caller_actual_parameters,
   //
   // For realloc failure exception we just pop frames, skip the guarantee.
 
-  assert(*bcp != Bytecodes::_monitorenter || is_top_frame, "a _monitorenter must be a top frame");
+  assert(READ_BYTECODE(bcp) != Bytecodes::_monitorenter || is_top_frame, "a _monitorenter must be a top frame");
   assert(thread->deopt_compiled_method() != NULL, "compiled method should be known");
   guarantee(realloc_failure_exception || !(thread->deopt_compiled_method()->is_compiled_by_c2() &&
-              *bcp == Bytecodes::_monitorenter             &&
+              READ_BYTECODE(bcp) == Bytecodes::_monitorenter             &&
               exec_mode == Deoptimization::Unpack_exception),
             "shouldn't get exception during monitorenter");
 

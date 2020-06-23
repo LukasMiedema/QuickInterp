@@ -563,7 +563,7 @@ class Arguments : AllStatic {
 
   // -agentlib -agentpath
   static AgentLibrary* agents()             { return _agentList.first(); }
-  static bool init_agents_at_startup()      { return !_agentList.is_empty(); }
+  static bool init_agents_at_startup()      { return true || !_agentList.is_empty(); }
 
   // abort, exit, vfprintf hooks
   static abort_hook_t    abort_hook()       { return _abort_hook; }

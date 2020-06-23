@@ -66,6 +66,7 @@ BOOT_MODULES += \
     jdk.net \
     jdk.sctp \
     jdk.unsupported \
+    jdk.internal.vm.si \
     #
 
 # to be deprivileged

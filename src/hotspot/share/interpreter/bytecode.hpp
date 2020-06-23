@@ -44,6 +44,7 @@ class Bytecode: public StackObj {
 
   // Address computation
   address addr_at            (int offset)        const     { return (address)_bcp + offset; }
+  u_char instr_at(int offset) const              { return READ_BYTECODE(addr_at(offset)); }
   u_char byte_at(int offset) const               { return *addr_at(offset); }
   address aligned_addr_at    (int offset)        const     { return align_up(addr_at(offset), jintSize); }
 
@@ -72,27 +73,27 @@ class Bytecode: public StackObj {
   // Static functions for parsing bytecodes in place.
   int get_index_u1(Bytecodes::Code bc) const {
     assert_same_format_as(bc); assert_index_size(1, bc);
-    return *(jubyte*)addr_at(1);
+    return *(jubyte*)addr_at(2);
   }
   int get_index_u2(Bytecodes::Code bc, bool is_wide = false) const {
     assert_same_format_as(bc, is_wide); assert_index_size(2, bc, is_wide);
-    address p = addr_at(is_wide ? 2 : 1);
+    address p = addr_at(is_wide ? 3 : 2);
     if (can_use_native_byte_order(bc, is_wide))
       return Bytes::get_native_u2(p);
     else  return Bytes::get_Java_u2(p);
   }
   int get_index_u1_cpcache(Bytecodes::Code bc) const {
     assert_same_format_as(bc); assert_index_size(1, bc);
-    return *(jubyte*)addr_at(1) + ConstantPool::CPCACHE_INDEX_TAG;
+    return *(jubyte*)addr_at(2) + ConstantPool::CPCACHE_INDEX_TAG;
   }
   int get_index_u2_cpcache(Bytecodes::Code bc) const {
     assert_same_format_as(bc); assert_index_size(2, bc); assert_native_index(bc);
-    return Bytes::get_native_u2(addr_at(1)) + ConstantPool::CPCACHE_INDEX_TAG;
+    return Bytes::get_native_u2(addr_at(2)) + ConstantPool::CPCACHE_INDEX_TAG;
   }
   int get_index_u4(Bytecodes::Code bc) const {
     assert_same_format_as(bc); assert_index_size(4, bc);
     assert(can_use_native_byte_order(bc), "");
-    return Bytes::get_native_u4(addr_at(1));
+    return Bytes::get_native_u4(addr_at(2));
   }
   bool has_index_u4(Bytecodes::Code bc) const {
     return bc == Bytecodes::_invokedynamic;
@@ -100,11 +101,11 @@ class Bytecode: public StackObj {
 
   int get_offset_s2(Bytecodes::Code bc) const {
     assert_same_format_as(bc); assert_offset_size(2, bc);
-    return (jshort) Bytes::get_Java_u2(addr_at(1));
+    return (jshort) Bytes::get_Java_u2(addr_at(2));
   }
   int get_offset_s4(Bytecodes::Code bc) const {
     assert_same_format_as(bc); assert_offset_size(4, bc);
-    return (jint) Bytes::get_Java_u4(addr_at(1));
+    return (jint) Bytes::get_Java_u4(addr_at(2));
   }
 
   int get_constant_u1(int offset, Bytecodes::Code bc) const {
@@ -151,11 +152,11 @@ class Bytecode_lookupswitch: public Bytecode {
   void verify() const PRODUCT_RETURN;
 
   // Attributes
-  int  default_offset() const                    { return get_aligned_Java_u4_at(1 + 0*jintSize); }
-  int  number_of_pairs() const                   { return get_aligned_Java_u4_at(1 + 1*jintSize); }
+  int  default_offset() const                    { return get_aligned_Java_u4_at(2 + 0*jintSize); }
+  int  number_of_pairs() const                   { return get_aligned_Java_u4_at(2 + 1*jintSize); }
   LookupswitchPair pair_at(int i) const          {
     assert(0 <= i && i < number_of_pairs(), "pair index out of bounds");
-    return LookupswitchPair(aligned_addr_at(1 + (1 + i)*2*jintSize));
+    return LookupswitchPair(aligned_addr_at(2 + (1 + i)*2*jintSize));
   }
 };
 
@@ -167,9 +168,9 @@ class Bytecode_tableswitch: public Bytecode {
   void verify() const PRODUCT_RETURN;
 
   // Attributes
-  int  default_offset() const                    { return get_aligned_Java_u4_at(1 + 0*jintSize); }
-  int  low_key() const                           { return get_aligned_Java_u4_at(1 + 1*jintSize); }
-  int  high_key() const                          { return get_aligned_Java_u4_at(1 + 2*jintSize); }
+  int  default_offset() const                    { return get_aligned_Java_u4_at(2 + 0*jintSize); }
+  int  low_key() const                           { return get_aligned_Java_u4_at(2 + 1*jintSize); }
+  int  high_key() const                          { return get_aligned_Java_u4_at(2 + 2*jintSize); }
   int  dest_offset_at(int i) const;
   int  length()                                  { return high_key()-low_key()+1; }
 };

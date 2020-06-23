@@ -109,6 +109,16 @@
 #define INTX_FORMAT_W(width)  "%" #width PRIdPTR
 #define UINTX_FORMAT_W(width) "%" #width PRIuPTR
 
+// Shortcode
+#define READ_BYTECODE(address) ((((jshort) *(address)) << 8) | ((jshort) *(address + 1)))
+#define WRITE_BYTECODE(address, value_expr) \
+    do {                                    \
+        jshort value = (value_expr);        \
+        *(address) = (value >> 8) & 0xFF;   \
+        *(address + 1) = value & 0xFF;      \
+    } while (0);
+
+
 //----------------------------------------------------------------------------------------------------
 // Constants
 

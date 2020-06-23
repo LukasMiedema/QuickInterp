@@ -180,7 +180,7 @@
               THREAD->jvmti_thread_state()->is_earlyret_pending()) {             \
             goto handle_Early_Return;                                            \
           }                                                                      \
-          opcode = *pc;                                                          \
+          opcode = READ_BYTECODE(pc);                                                          \
         }                                                                        \
       }                                                                          \
 }
@@ -197,7 +197,7 @@
 // initialization (which is is the initialization of the table pointer...)
 #define DISPATCH(opcode) goto *(void*)dispatch_table[opcode]
 #define CONTINUE {                              \
-        opcode = *pc;                           \
+        opcode = READ_BYTECODE(pc);                           \
         DO_UPDATE_INSTRUCTION_COUNT(opcode);    \
         DEBUGGER_SINGLE_STEP_NOTIFY();          \
         DISPATCH(opcode);                       \
@@ -205,7 +205,7 @@
 #else
 #ifdef PREFETCH_OPCCODE
 #define CONTINUE {                              \
-        opcode = *pc;                           \
+        opcode = READ_BYTECODE(pc);                           \
         DO_UPDATE_INSTRUCTION_COUNT(opcode);    \
         DEBUGGER_SINGLE_STEP_NOTIFY();          \
         continue;                               \
@@ -236,14 +236,14 @@
 #undef UPDATE_PC_AND_TOS_AND_CONTINUE
 #ifdef USELABELS
 #define UPDATE_PC_AND_TOS_AND_CONTINUE(opsize, stack) {         \
-        pc += opsize; opcode = *pc; MORE_STACK(stack);          \
+        pc += opsize; opcode = READ_BYTECODE(pc); MORE_STACK(stack);          \
         DO_UPDATE_INSTRUCTION_COUNT(opcode);                    \
         DEBUGGER_SINGLE_STEP_NOTIFY();                          \
         DISPATCH(opcode);                                       \
     }
 
 #define UPDATE_PC_AND_CONTINUE(opsize) {                        \
-        pc += opsize; opcode = *pc;                             \
+        pc += opsize; opcode = READ_BYTECODE(pc);               \
         DO_UPDATE_INSTRUCTION_COUNT(opcode);                    \
         DEBUGGER_SINGLE_STEP_NOTIFY();                          \
         DISPATCH(opcode);                                       \
@@ -251,14 +251,14 @@
 #else
 #ifdef PREFETCH_OPCCODE
 #define UPDATE_PC_AND_TOS_AND_CONTINUE(opsize, stack) {         \
-        pc += opsize; opcode = *pc; MORE_STACK(stack);          \
+        pc += opsize; opcode = READ_BYTECODE(pc); MORE_STACK(stack);          \
         DO_UPDATE_INSTRUCTION_COUNT(opcode);                    \
         DEBUGGER_SINGLE_STEP_NOTIFY();                          \
         goto do_continue;                                       \
     }
 
 #define UPDATE_PC_AND_CONTINUE(opsize) {                        \
-        pc += opsize; opcode = *pc;                             \
+        pc += opsize; opcode = READ_BYTECODE(pc);               \
         DO_UPDATE_INSTRUCTION_COUNT(opcode);                    \
         DEBUGGER_SINGLE_STEP_NOTIFY();                          \
         goto do_continue;                                       \
@@ -496,7 +496,7 @@ BytecodeInterpreter::run(interpreterState istate) {
 
   register intptr_t*        topOfStack = (intptr_t *)istate->stack(); /* access with STACK macros */
   register address          pc = istate->bcp();
-  register jubyte opcode;
+  register jushort          opcode;
   register intptr_t*        locals = istate->locals();
   register ConstantPoolCache*    cp = istate->constants(); // method()->constants()->cache()
 #ifdef LOTS_OF_REGS
@@ -507,7 +507,7 @@ BytecodeInterpreter::run(interpreterState istate) {
 #endif
 
 #ifdef USELABELS
-  const static void* const opclabels_data[256] = {
+  const static void* const opclabels_data[1 << 16] = {
 /* 0x00 */ &&opc_nop,     &&opc_aconst_null,&&opc_iconst_m1,&&opc_iconst_0,
 /* 0x04 */ &&opc_iconst_1,&&opc_iconst_2,   &&opc_iconst_3, &&opc_iconst_4,
 /* 0x08 */ &&opc_iconst_5,&&opc_lconst_0,   &&opc_lconst_1, &&opc_fconst_0,
@@ -929,7 +929,7 @@ BytecodeInterpreter::run(interpreterState istate) {
           }
         }
       }
-      UPDATE_PC_AND_TOS(1, -1);
+      UPDATE_PC_AND_TOS(2, -1);
       goto run;
     }
     default: {
@@ -939,10 +939,10 @@ BytecodeInterpreter::run(interpreterState istate) {
 
 run:
 
-  DO_UPDATE_INSTRUCTION_COUNT(*pc)
+  DO_UPDATE_INSTRUCTION_COUNT(READ_BYTECODE(pc));
   DEBUGGER_SINGLE_STEP_NOTIFY();
 #ifdef PREFETCH_OPCCODE
-  opcode = *pc;  /* prefetch first opcode */
+  opcode = READ_BYTECODE(pc);  /* prefetch first opcode */
 #endif
 
 #ifndef USELABELS
@@ -950,7 +950,7 @@ run:
 #endif
   {
 #ifndef PREFETCH_OPCCODE
-      opcode = *pc;
+      opcode = READ_BYTECODE(pc);
 #endif
       // Seems like this happens twice per opcode. At worst this is only
       // need at entry to the loop.
@@ -967,23 +967,24 @@ run:
 #ifdef USELABELS
       DISPATCH(opcode);
 #else
+//      printf("bci: %li, bytecode: %x, method: %s\n", pc - istate->bcp(), opcode, istate->method()->name_and_sig_as_C_string());
       switch (opcode)
 #endif
       {
       CASE(_nop):
-          UPDATE_PC_AND_CONTINUE(1);
+          UPDATE_PC_AND_CONTINUE(2);
 
           /* Push miscellaneous constants onto the stack. */
 
       CASE(_aconst_null):
           SET_STACK_OBJECT(NULL, 0);
-          UPDATE_PC_AND_TOS_AND_CONTINUE(1, 1);
+          UPDATE_PC_AND_TOS_AND_CONTINUE(2, 1);
 
 #undef  OPC_CONST_n
 #define OPC_CONST_n(opcode, const_type, value)                          \
       CASE(opcode):                                                     \
           SET_STACK_ ## const_type(value, 0);                           \
-          UPDATE_PC_AND_TOS_AND_CONTINUE(1, 1);
+          UPDATE_PC_AND_TOS_AND_CONTINUE(2, 1);
 
           OPC_CONST_n(_iconst_m1,   INT,       -1);
           OPC_CONST_n(_iconst_0,    INT,        0);
@@ -1001,7 +1002,7 @@ run:
       CASE(_##opcname):                                                 \
       {                                                                 \
           SET_STACK_ ## kind(VM##key##Const##value(), 1);               \
-          UPDATE_PC_AND_TOS_AND_CONTINUE(1, 2);                         \
+          UPDATE_PC_AND_TOS_AND_CONTINUE(2, 2);                         \
       }
          OPC_CONST2_n(dconst_0, Zero, double, DOUBLE);
          OPC_CONST2_n(dconst_1, One,  double, DOUBLE);
@@ -1012,52 +1013,52 @@ run:
 
           /* Push a 1-byte signed integer value onto the stack. */
       CASE(_bipush):
-          SET_STACK_INT((jbyte)(pc[1]), 0);
-          UPDATE_PC_AND_TOS_AND_CONTINUE(2, 1);
+          SET_STACK_INT((jbyte)(pc[2]), 0);
+          UPDATE_PC_AND_TOS_AND_CONTINUE(3, 1);
 
           /* Push a 2-byte signed integer constant onto the stack. */
       CASE(_sipush):
-          SET_STACK_INT((int16_t)Bytes::get_Java_u2(pc + 1), 0);
-          UPDATE_PC_AND_TOS_AND_CONTINUE(3, 1);
+          SET_STACK_INT((int16_t)Bytes::get_Java_u2(pc + 2), 0);
+          UPDATE_PC_AND_TOS_AND_CONTINUE(4, 1);
 
           /* load from local variable */
 
       CASE(_aload):
-          VERIFY_OOP(LOCALS_OBJECT(pc[1]));
-          SET_STACK_OBJECT(LOCALS_OBJECT(pc[1]), 0);
-          UPDATE_PC_AND_TOS_AND_CONTINUE(2, 1);
+          VERIFY_OOP(LOCALS_OBJECT(pc[2]));
+          SET_STACK_OBJECT(LOCALS_OBJECT(pc[2]), 0);
+          UPDATE_PC_AND_TOS_AND_CONTINUE(3, 1);
 
       CASE(_iload):
       CASE(_fload):
-          SET_STACK_SLOT(LOCALS_SLOT(pc[1]), 0);
-          UPDATE_PC_AND_TOS_AND_CONTINUE(2, 1);
+          SET_STACK_SLOT(LOCALS_SLOT(pc[2]), 0);
+          UPDATE_PC_AND_TOS_AND_CONTINUE(3, 1);
 
       CASE(_lload):
-          SET_STACK_LONG_FROM_ADDR(LOCALS_LONG_AT(pc[1]), 1);
-          UPDATE_PC_AND_TOS_AND_CONTINUE(2, 2);
+          SET_STACK_LONG_FROM_ADDR(LOCALS_LONG_AT(pc[2]), 1);
+          UPDATE_PC_AND_TOS_AND_CONTINUE(3, 2);
 
       CASE(_dload):
-          SET_STACK_DOUBLE_FROM_ADDR(LOCALS_DOUBLE_AT(pc[1]), 1);
-          UPDATE_PC_AND_TOS_AND_CONTINUE(2, 2);
+          SET_STACK_DOUBLE_FROM_ADDR(LOCALS_DOUBLE_AT(pc[2]), 1);
+          UPDATE_PC_AND_TOS_AND_CONTINUE(3, 2);
 
 #undef  OPC_LOAD_n
 #define OPC_LOAD_n(num)                                                 \
       CASE(_aload_##num):                                               \
           VERIFY_OOP(LOCALS_OBJECT(num));                               \
           SET_STACK_OBJECT(LOCALS_OBJECT(num), 0);                      \
-          UPDATE_PC_AND_TOS_AND_CONTINUE(1, 1);                         \
+          UPDATE_PC_AND_TOS_AND_CONTINUE(2, 1);                         \
                                                                         \
       CASE(_iload_##num):                                               \
       CASE(_fload_##num):                                               \
           SET_STACK_SLOT(LOCALS_SLOT(num), 0);                          \
-          UPDATE_PC_AND_TOS_AND_CONTINUE(1, 1);                         \
+          UPDATE_PC_AND_TOS_AND_CONTINUE(2, 1);                         \
                                                                         \
       CASE(_lload_##num):                                               \
           SET_STACK_LONG_FROM_ADDR(LOCALS_LONG_AT(num), 1);             \
-          UPDATE_PC_AND_TOS_AND_CONTINUE(1, 2);                         \
+          UPDATE_PC_AND_TOS_AND_CONTINUE(2, 2);                         \
       CASE(_dload_##num):                                               \
           SET_STACK_DOUBLE_FROM_ADDR(LOCALS_DOUBLE_AT(num), 1);         \
-          UPDATE_PC_AND_TOS_AND_CONTINUE(1, 2);
+          UPDATE_PC_AND_TOS_AND_CONTINUE(2, 2);
 
           OPC_LOAD_n(0);
           OPC_LOAD_n(1);
@@ -1067,26 +1068,26 @@ run:
           /* store to a local variable */
 
       CASE(_astore):
-          astore(topOfStack, -1, locals, pc[1]);
-          UPDATE_PC_AND_TOS_AND_CONTINUE(2, -1);
+          astore(topOfStack, -1, locals, pc[2]);
+          UPDATE_PC_AND_TOS_AND_CONTINUE(3, -1);
 
       CASE(_istore):
       CASE(_fstore):
-          SET_LOCALS_SLOT(STACK_SLOT(-1), pc[1]);
-          UPDATE_PC_AND_TOS_AND_CONTINUE(2, -1);
+          SET_LOCALS_SLOT(STACK_SLOT(-1), pc[2]);
+          UPDATE_PC_AND_TOS_AND_CONTINUE(3, -1);
 
       CASE(_lstore):
-          SET_LOCALS_LONG(STACK_LONG(-1), pc[1]);
-          UPDATE_PC_AND_TOS_AND_CONTINUE(2, -2);
+          SET_LOCALS_LONG(STACK_LONG(-1), pc[2]);
+          UPDATE_PC_AND_TOS_AND_CONTINUE(3, -2);
 
       CASE(_dstore):
-          SET_LOCALS_DOUBLE(STACK_DOUBLE(-1), pc[1]);
-          UPDATE_PC_AND_TOS_AND_CONTINUE(2, -2);
+          SET_LOCALS_DOUBLE(STACK_DOUBLE(-1), pc[2]);
+          UPDATE_PC_AND_TOS_AND_CONTINUE(3, -2);
 
       CASE(_wide): {
-          uint16_t reg = Bytes::get_Java_u2(pc + 2);
+          uint16_t reg = Bytes::get_Java_u2(pc + 4);
 
-          opcode = pc[1];
+          opcode = READ_BYTECODE(pc + 2);
 
           // Wide and it's sub-bytecode are counted as separate instructions. If we
           // don't account for this here, the bytecode trace skips the next bytecode.
@@ -1096,43 +1097,43 @@ run:
               case Bytecodes::_aload:
                   VERIFY_OOP(LOCALS_OBJECT(reg));
                   SET_STACK_OBJECT(LOCALS_OBJECT(reg), 0);
-                  UPDATE_PC_AND_TOS_AND_CONTINUE(4, 1);
+                  UPDATE_PC_AND_TOS_AND_CONTINUE(6, 1);
 
               case Bytecodes::_iload:
               case Bytecodes::_fload:
                   SET_STACK_SLOT(LOCALS_SLOT(reg), 0);
-                  UPDATE_PC_AND_TOS_AND_CONTINUE(4, 1);
+                  UPDATE_PC_AND_TOS_AND_CONTINUE(6, 1);
 
               case Bytecodes::_lload:
                   SET_STACK_LONG_FROM_ADDR(LOCALS_LONG_AT(reg), 1);
-                  UPDATE_PC_AND_TOS_AND_CONTINUE(4, 2);
+                  UPDATE_PC_AND_TOS_AND_CONTINUE(6, 2);
 
               case Bytecodes::_dload:
                   SET_STACK_DOUBLE_FROM_ADDR(LOCALS_LONG_AT(reg), 1);
-                  UPDATE_PC_AND_TOS_AND_CONTINUE(4, 2);
+                  UPDATE_PC_AND_TOS_AND_CONTINUE(6, 2);
 
               case Bytecodes::_astore:
                   astore(topOfStack, -1, locals, reg);
-                  UPDATE_PC_AND_TOS_AND_CONTINUE(4, -1);
+                  UPDATE_PC_AND_TOS_AND_CONTINUE(6, -1);
 
               case Bytecodes::_istore:
               case Bytecodes::_fstore:
                   SET_LOCALS_SLOT(STACK_SLOT(-1), reg);
-                  UPDATE_PC_AND_TOS_AND_CONTINUE(4, -1);
+                  UPDATE_PC_AND_TOS_AND_CONTINUE(6, -1);
 
               case Bytecodes::_lstore:
                   SET_LOCALS_LONG(STACK_LONG(-1), reg);
-                  UPDATE_PC_AND_TOS_AND_CONTINUE(4, -2);
+                  UPDATE_PC_AND_TOS_AND_CONTINUE(6, -2);
 
               case Bytecodes::_dstore:
                   SET_LOCALS_DOUBLE(STACK_DOUBLE(-1), reg);
-                  UPDATE_PC_AND_TOS_AND_CONTINUE(4, -2);
+                  UPDATE_PC_AND_TOS_AND_CONTINUE(6, -2);
 
               case Bytecodes::_iinc: {
-                  int16_t offset = (int16_t)Bytes::get_Java_u2(pc+4);
+                  int16_t offset = (int16_t)Bytes::get_Java_u2(pc+6);
                   // Be nice to see what this generates.... QQQ
                   SET_LOCALS_INT(LOCALS_INT(reg) + offset, reg);
-                  UPDATE_PC_AND_CONTINUE(6);
+                  UPDATE_PC_AND_CONTINUE(8);
               }
               case Bytecodes::_ret:
                   // Profile ret.
@@ -1150,11 +1151,11 @@ run:
 #define OPC_STORE_n(num)                                                \
       CASE(_astore_##num):                                              \
           astore(topOfStack, -1, locals, num);                          \
-          UPDATE_PC_AND_TOS_AND_CONTINUE(1, -1);                        \
+          UPDATE_PC_AND_TOS_AND_CONTINUE(2, -1);                        \
       CASE(_istore_##num):                                              \
       CASE(_fstore_##num):                                              \
           SET_LOCALS_SLOT(STACK_SLOT(-1), num);                         \
-          UPDATE_PC_AND_TOS_AND_CONTINUE(1, -1);
+          UPDATE_PC_AND_TOS_AND_CONTINUE(2, -1);
 
           OPC_STORE_n(0);
           OPC_STORE_n(1);
@@ -1165,10 +1166,10 @@ run:
 #define OPC_DSTORE_n(num)                                               \
       CASE(_dstore_##num):                                              \
           SET_LOCALS_DOUBLE(STACK_DOUBLE(-1), num);                     \
-          UPDATE_PC_AND_TOS_AND_CONTINUE(1, -2);                        \
+          UPDATE_PC_AND_TOS_AND_CONTINUE(2, -2);                        \
       CASE(_lstore_##num):                                              \
           SET_LOCALS_LONG(STACK_LONG(-1), num);                         \
-          UPDATE_PC_AND_TOS_AND_CONTINUE(1, -2);
+          UPDATE_PC_AND_TOS_AND_CONTINUE(2, -2);
 
           OPC_DSTORE_n(0);
           OPC_DSTORE_n(1);
@@ -1179,40 +1180,40 @@ run:
 
 
       CASE(_pop):                /* Discard the top item on the stack */
-          UPDATE_PC_AND_TOS_AND_CONTINUE(1, -1);
+          UPDATE_PC_AND_TOS_AND_CONTINUE(2, -1);
 
 
       CASE(_pop2):               /* Discard the top 2 items on the stack */
-          UPDATE_PC_AND_TOS_AND_CONTINUE(1, -2);
+          UPDATE_PC_AND_TOS_AND_CONTINUE(2, -2);
 
 
       CASE(_dup):               /* Duplicate the top item on the stack */
           dup(topOfStack);
-          UPDATE_PC_AND_TOS_AND_CONTINUE(1, 1);
+          UPDATE_PC_AND_TOS_AND_CONTINUE(2, 1);
 
       CASE(_dup2):              /* Duplicate the top 2 items on the stack */
           dup2(topOfStack);
-          UPDATE_PC_AND_TOS_AND_CONTINUE(1, 2);
+          UPDATE_PC_AND_TOS_AND_CONTINUE(2, 2);
 
       CASE(_dup_x1):    /* insert top word two down */
           dup_x1(topOfStack);
-          UPDATE_PC_AND_TOS_AND_CONTINUE(1, 1);
+          UPDATE_PC_AND_TOS_AND_CONTINUE(2, 1);
 
       CASE(_dup_x2):    /* insert top word three down  */
           dup_x2(topOfStack);
-          UPDATE_PC_AND_TOS_AND_CONTINUE(1, 1);
+          UPDATE_PC_AND_TOS_AND_CONTINUE(2, 1);
 
       CASE(_dup2_x1):   /* insert top 2 slots three down */
           dup2_x1(topOfStack);
-          UPDATE_PC_AND_TOS_AND_CONTINUE(1, 2);
+          UPDATE_PC_AND_TOS_AND_CONTINUE(2, 2);
 
       CASE(_dup2_x2):   /* insert top 2 slots four down */
           dup2_x2(topOfStack);
-          UPDATE_PC_AND_TOS_AND_CONTINUE(1, 2);
+          UPDATE_PC_AND_TOS_AND_CONTINUE(2, 2);
 
       CASE(_swap): {        /* swap top two elements on the stack */
           swap(topOfStack);
-          UPDATE_PC_AND_CONTINUE(1);
+          UPDATE_PC_AND_CONTINUE(2);
       }
 
           /* Perform various binary integer operations */
@@ -1227,7 +1228,7 @@ run:
           SET_STACK_INT(VMint##opname(STACK_INT(-2),                    \
                                       STACK_INT(-1)),                   \
                                       -2);                              \
-          UPDATE_PC_AND_TOS_AND_CONTINUE(1, -1);                        \
+          UPDATE_PC_AND_TOS_AND_CONTINUE(2, -1);                        \
       CASE(_l##opcname):                                                \
       {                                                                 \
           if (test) {                                                   \
@@ -1241,7 +1242,7 @@ run:
           SET_STACK_LONG(VMlong##opname(STACK_LONG(-3),                 \
                                         STACK_LONG(-1)),                \
                                         -3);                            \
-          UPDATE_PC_AND_TOS_AND_CONTINUE(1, -2);                        \
+          UPDATE_PC_AND_TOS_AND_CONTINUE(2, -2);                        \
       }
 
       OPC_INT_BINARY(add, Add, 0);
@@ -1263,13 +1264,13 @@ run:
           SET_STACK_DOUBLE(VMdouble##opname(STACK_DOUBLE(-3),              \
                                             STACK_DOUBLE(-1)),             \
                                             -3);                           \
-          UPDATE_PC_AND_TOS_AND_CONTINUE(1, -2);                           \
+          UPDATE_PC_AND_TOS_AND_CONTINUE(2, -2);                           \
       }                                                                    \
       CASE(_f##opcname):                                                   \
           SET_STACK_FLOAT(VMfloat##opname(STACK_FLOAT(-2),                 \
                                           STACK_FLOAT(-1)),                \
                                           -2);                             \
-          UPDATE_PC_AND_TOS_AND_CONTINUE(1, -1);
+          UPDATE_PC_AND_TOS_AND_CONTINUE(2, -1);
 
 
      OPC_FLOAT_BINARY(add, Add);
@@ -1290,13 +1291,13 @@ run:
          SET_STACK_INT(VMint##opname(STACK_INT(-2),                     \
                                      STACK_INT(-1)),                    \
                                      -2);                               \
-         UPDATE_PC_AND_TOS_AND_CONTINUE(1, -1);                         \
+         UPDATE_PC_AND_TOS_AND_CONTINUE(2, -1);                         \
       CASE(_l##opcname):                                                \
       {                                                                 \
          SET_STACK_LONG(VMlong##opname(STACK_LONG(-2),                  \
                                        STACK_INT(-1)),                  \
                                        -2);                             \
-         UPDATE_PC_AND_TOS_AND_CONTINUE(1, -1);                         \
+         UPDATE_PC_AND_TOS_AND_CONTINUE(2, -1);                         \
       }
 
       OPC_SHIFT_BINARY(shl, Shl);
@@ -1307,37 +1308,37 @@ run:
       CASE(_iinc):
       {
           // locals[pc[1]].j.i += (jbyte)(pc[2]);
-          SET_LOCALS_INT(LOCALS_INT(pc[1]) + (jbyte)(pc[2]), pc[1]);
-          UPDATE_PC_AND_CONTINUE(3);
+          SET_LOCALS_INT(LOCALS_INT(pc[2]) + (jbyte)(pc[3]), pc[2]);
+          UPDATE_PC_AND_CONTINUE(4);
       }
 
      /* negate the value on the top of the stack */
 
       CASE(_ineg):
          SET_STACK_INT(VMintNeg(STACK_INT(-1)), -1);
-         UPDATE_PC_AND_CONTINUE(1);
+         UPDATE_PC_AND_CONTINUE(2);
 
       CASE(_fneg):
          SET_STACK_FLOAT(VMfloatNeg(STACK_FLOAT(-1)), -1);
-         UPDATE_PC_AND_CONTINUE(1);
+         UPDATE_PC_AND_CONTINUE(2);
 
       CASE(_lneg):
       {
          SET_STACK_LONG(VMlongNeg(STACK_LONG(-1)), -1);
-         UPDATE_PC_AND_CONTINUE(1);
+         UPDATE_PC_AND_CONTINUE(2);
       }
 
       CASE(_dneg):
       {
          SET_STACK_DOUBLE(VMdoubleNeg(STACK_DOUBLE(-1)), -1);
-         UPDATE_PC_AND_CONTINUE(1);
+         UPDATE_PC_AND_CONTINUE(2);
       }
 
       /* Conversion operations */
 
       CASE(_i2f):       /* convert top of stack int to float */
          SET_STACK_FLOAT(VMint2Float(STACK_INT(-1)), -1);
-         UPDATE_PC_AND_CONTINUE(1);
+         UPDATE_PC_AND_CONTINUE(2);
 
       CASE(_i2l):       /* convert top of stack int to long */
       {
@@ -1346,7 +1347,7 @@ run:
           MORE_STACK(-1); // Pop
           SET_STACK_LONG(r, 1);
 
-          UPDATE_PC_AND_TOS_AND_CONTINUE(1, 2);
+          UPDATE_PC_AND_TOS_AND_CONTINUE(2, 2);
       }
 
       CASE(_i2d):       /* convert top of stack int to double */
@@ -1356,7 +1357,7 @@ run:
           MORE_STACK(-1); // Pop
           SET_STACK_DOUBLE(r, 1);
 
-          UPDATE_PC_AND_TOS_AND_CONTINUE(1, 2);
+          UPDATE_PC_AND_TOS_AND_CONTINUE(2, 2);
       }
 
       CASE(_l2i):       /* convert top of stack long to int */
@@ -1364,7 +1365,7 @@ run:
           jint r = VMlong2Int(STACK_LONG(-1));
           MORE_STACK(-2); // Pop
           SET_STACK_INT(r, 0);
-          UPDATE_PC_AND_TOS_AND_CONTINUE(1, 1);
+          UPDATE_PC_AND_TOS_AND_CONTINUE(2, 1);
       }
 
       CASE(_l2f):   /* convert top of stack long to float */
@@ -1372,7 +1373,7 @@ run:
           jlong r = STACK_LONG(-1);
           MORE_STACK(-2); // Pop
           SET_STACK_FLOAT(VMlong2Float(r), 0);
-          UPDATE_PC_AND_TOS_AND_CONTINUE(1, 1);
+          UPDATE_PC_AND_TOS_AND_CONTINUE(2, 1);
       }
 
       CASE(_l2d):       /* convert top of stack long to double */
@@ -1380,19 +1381,19 @@ run:
           jlong r = STACK_LONG(-1);
           MORE_STACK(-2); // Pop
           SET_STACK_DOUBLE(VMlong2Double(r), 1);
-          UPDATE_PC_AND_TOS_AND_CONTINUE(1, 2);
+          UPDATE_PC_AND_TOS_AND_CONTINUE(2, 2);
       }
 
       CASE(_f2i):  /* Convert top of stack float to int */
           SET_STACK_INT(SharedRuntime::f2i(STACK_FLOAT(-1)), -1);
-          UPDATE_PC_AND_CONTINUE(1);
+          UPDATE_PC_AND_CONTINUE(2);
 
       CASE(_f2l):  /* convert top of stack float to long */
       {
           jlong r = SharedRuntime::f2l(STACK_FLOAT(-1));
           MORE_STACK(-1); // POP
           SET_STACK_LONG(r, 1);
-          UPDATE_PC_AND_TOS_AND_CONTINUE(1, 2);
+          UPDATE_PC_AND_TOS_AND_CONTINUE(2, 2);
       }
 
       CASE(_f2d):  /* convert top of stack float to double */
@@ -1403,7 +1404,7 @@ run:
           r = (jdouble) f;
           MORE_STACK(-1); // POP
           SET_STACK_DOUBLE(r, 1);
-          UPDATE_PC_AND_TOS_AND_CONTINUE(1, 2);
+          UPDATE_PC_AND_TOS_AND_CONTINUE(2, 2);
       }
 
       CASE(_d2i): /* convert top of stack double to int */
@@ -1411,7 +1412,7 @@ run:
           jint r1 = SharedRuntime::d2i(STACK_DOUBLE(-1));
           MORE_STACK(-2);
           SET_STACK_INT(r1, 0);
-          UPDATE_PC_AND_TOS_AND_CONTINUE(1, 1);
+          UPDATE_PC_AND_TOS_AND_CONTINUE(2, 1);
       }
 
       CASE(_d2f): /* convert top of stack double to float */
@@ -1419,7 +1420,7 @@ run:
           jfloat r1 = VMdouble2Float(STACK_DOUBLE(-1));
           MORE_STACK(-2);
           SET_STACK_FLOAT(r1, 0);
-          UPDATE_PC_AND_TOS_AND_CONTINUE(1, 1);
+          UPDATE_PC_AND_TOS_AND_CONTINUE(2, 1);
       }
 
       CASE(_d2l): /* convert top of stack double to long */
@@ -1427,20 +1428,20 @@ run:
           jlong r1 = SharedRuntime::d2l(STACK_DOUBLE(-1));
           MORE_STACK(-2);
           SET_STACK_LONG(r1, 1);
-          UPDATE_PC_AND_TOS_AND_CONTINUE(1, 2);
+          UPDATE_PC_AND_TOS_AND_CONTINUE(2, 2);
       }
 
       CASE(_i2b):
           SET_STACK_INT(VMint2Byte(STACK_INT(-1)), -1);
-          UPDATE_PC_AND_CONTINUE(1);
+          UPDATE_PC_AND_CONTINUE(2);
 
       CASE(_i2c):
           SET_STACK_INT(VMint2Char(STACK_INT(-1)), -1);
-          UPDATE_PC_AND_CONTINUE(1);
+          UPDATE_PC_AND_CONTINUE(2);
 
       CASE(_i2s):
           SET_STACK_INT(VMint2Short(STACK_INT(-1)), -1);
-          UPDATE_PC_AND_CONTINUE(1);
+          UPDATE_PC_AND_CONTINUE(2);
 
       /* comparison operators */
 
@@ -1449,7 +1450,7 @@ run:
       CASE(_if_icmp##name): {                                                \
           const bool cmp = (STACK_INT(-2) comparison STACK_INT(-1));         \
           int skip = cmp                                                     \
-                      ? (int16_t)Bytes::get_Java_u2(pc + 1) : 3;             \
+                      ? (int16_t)Bytes::get_Java_u2(pc + 2) : 4;             \
           address branch_pc = pc;                                            \
           /* Profile branch. */                                              \
           BI_PROFILE_UPDATE_BRANCH(/*is_taken=*/cmp);                        \
@@ -1460,7 +1461,7 @@ run:
       CASE(_if##name): {                                                     \
           const bool cmp = (STACK_INT(-1) comparison 0);                     \
           int skip = cmp                                                     \
-                      ? (int16_t)Bytes::get_Java_u2(pc + 1) : 3;             \
+                      ? (int16_t)Bytes::get_Java_u2(pc + 2) : 4;             \
           address branch_pc = pc;                                            \
           /* Profile branch. */                                              \
           BI_PROFILE_UPDATE_BRANCH(/*is_taken=*/cmp);                        \
@@ -1474,7 +1475,7 @@ run:
       CASE(_if_acmp##name): {                                                \
           const bool cmp = (STACK_OBJECT(-2) comparison STACK_OBJECT(-1));   \
           int skip = cmp                                                     \
-                       ? (int16_t)Bytes::get_Java_u2(pc + 1) : 3;            \
+                       ? (int16_t)Bytes::get_Java_u2(pc + 2) : 4;            \
           address branch_pc = pc;                                            \
           /* Profile branch. */                                              \
           BI_PROFILE_UPDATE_BRANCH(/*is_taken=*/cmp);                        \
@@ -1487,7 +1488,7 @@ run:
       CASE(_if##name): {                                                     \
           const bool cmp = (!(STACK_OBJECT(-1) == NULL));                    \
           int skip = cmp                                                     \
-                      ? (int16_t)Bytes::get_Java_u2(pc + 1) : 3;             \
+                      ? (int16_t)Bytes::get_Java_u2(pc + 2) : 4;             \
           address branch_pc = pc;                                            \
           /* Profile branch. */                                              \
           BI_PROFILE_UPDATE_BRANCH(/*is_taken=*/cmp);                        \
@@ -1500,7 +1501,7 @@ run:
       CASE(_if##name): {                                                     \
           const bool cmp = ((STACK_OBJECT(-1) == NULL));                     \
           int skip = cmp                                                     \
-                      ? (int16_t)Bytes::get_Java_u2(pc + 1) : 3;             \
+                      ? (int16_t)Bytes::get_Java_u2(pc + 2) : 4;             \
           address branch_pc = pc;                                            \
           /* Profile branch. */                                              \
           BI_PROFILE_UPDATE_BRANCH(/*is_taken=*/cmp);                        \
@@ -1520,7 +1521,7 @@ run:
       /* Goto pc at specified offset in switch table. */
 
       CASE(_tableswitch): {
-          jint* lpc  = (jint*)VMalignWordUp(pc+1);
+          jint* lpc  = (jint*)VMalignWordUp(pc+2);
           int32_t  key  = STACK_INT(-1);
           int32_t  low  = Bytes::get_Java_u4((address)&lpc[1]);
           int32_t  high = Bytes::get_Java_u4((address)&lpc[2]);
@@ -1544,7 +1545,7 @@ run:
       /* Goto pc whose table entry matches specified key. */
 
       CASE(_lookupswitch): {
-          jint* lpc  = (jint*)VMalignWordUp(pc+1);
+          jint* lpc  = (jint*)VMalignWordUp(pc+2);
           int32_t  key  = STACK_INT(-1);
           int32_t  skip = Bytes::get_Java_u4((address) lpc); /* default amount */
           // Remember index.
@@ -1575,7 +1576,7 @@ run:
                                         STACK_FLOAT(-1),
                                         (opcode == Bytecodes::_fcmpl ? -1 : 1)),
                         -2);
-          UPDATE_PC_AND_TOS_AND_CONTINUE(1, -1);
+          UPDATE_PC_AND_TOS_AND_CONTINUE(2, -1);
       }
 
       CASE(_dcmpl):
@@ -1586,7 +1587,7 @@ run:
                                   (opcode == Bytecodes::_dcmpl ? -1 : 1));
           MORE_STACK(-4); // Pop
           SET_STACK_INT(r, 0);
-          UPDATE_PC_AND_TOS_AND_CONTINUE(1, 1);
+          UPDATE_PC_AND_TOS_AND_CONTINUE(2, 1);
       }
 
       CASE(_lcmp):
@@ -1594,7 +1595,7 @@ run:
           int r = VMlongCompare(STACK_LONG(-3), STACK_LONG(-1));
           MORE_STACK(-4);
           SET_STACK_INT(r, 0);
-          UPDATE_PC_AND_TOS_AND_CONTINUE(1, 1);
+          UPDATE_PC_AND_TOS_AND_CONTINUE(2, 1);
       }
 
 
@@ -1656,7 +1657,7 @@ run:
           (void)extra;                                                                \
           SET_ ## stackRes(*(T2 *)(((address) arrObj->base(T)) + index * sizeof(T2)), \
                            -2);                                                       \
-          UPDATE_PC_AND_TOS_AND_CONTINUE(1, -1);                                      \
+          UPDATE_PC_AND_TOS_AND_CONTINUE(2, -1);                                      \
       }
 
       /* 64-bit loads */
@@ -1665,7 +1666,7 @@ run:
           ARRAY_INTRO(-2);                                                                 \
           SET_ ## stackRes(*(T2 *)(((address) arrObj->base(T)) + index * sizeof(T2)), -1); \
           (void)extra;                                                                     \
-          UPDATE_PC_AND_CONTINUE(1);                                                       \
+          UPDATE_PC_AND_CONTINUE(2);                                                       \
       }
 
       CASE(_iaload):
@@ -1675,7 +1676,7 @@ run:
       CASE(_aaload): {
           ARRAY_INTRO(-2);
           SET_STACK_OBJECT(((objArrayOop) arrObj)->obj_at(index), -2);
-          UPDATE_PC_AND_TOS_AND_CONTINUE(1, -1);
+          UPDATE_PC_AND_TOS_AND_CONTINUE(2, -1);
       }
       CASE(_baload):
           ARRAY_LOADTO32(T_BYTE, jbyte,  "%d",   STACK_INT, 0);
@@ -1694,7 +1695,7 @@ run:
           ARRAY_INTRO(-3);                                                           \
           (void)extra;                                                               \
           *(T2 *)(((address) arrObj->base(T)) + index * sizeof(T2)) = stackSrc( -1); \
-          UPDATE_PC_AND_TOS_AND_CONTINUE(1, -3);                                     \
+          UPDATE_PC_AND_TOS_AND_CONTINUE(2, -3);                                     \
       }
 
       /* 64-bit stores */
@@ -1703,7 +1704,7 @@ run:
           ARRAY_INTRO(-4);                                                           \
           (void)extra;                                                               \
           *(T2 *)(((address) arrObj->base(T)) + index * sizeof(T2)) = stackSrc( -1); \
-          UPDATE_PC_AND_TOS_AND_CONTINUE(1, -4);                                     \
+          UPDATE_PC_AND_TOS_AND_CONTINUE(2, -4);                                     \
       }
 
       CASE(_iastore):
@@ -1738,7 +1739,7 @@ run:
             BI_PROFILE_UPDATE_CHECKCAST(/*null_seen=*/true, NULL);
           }
           ((objArrayOop) arrObj)->obj_at_put(index, rhsObject);
-          UPDATE_PC_AND_TOS_AND_CONTINUE(1, -3);
+          UPDATE_PC_AND_TOS_AND_CONTINUE(2, -3);
       }
       CASE(_bastore): {
           ARRAY_INTRO(-3);
@@ -1751,7 +1752,7 @@ run:
                    "should be byte array otherwise");
           }
           ((typeArrayOop)arrObj)->byte_at_put(index, item);
-          UPDATE_PC_AND_TOS_AND_CONTINUE(1, -3);
+          UPDATE_PC_AND_TOS_AND_CONTINUE(2, -3);
       }
       CASE(_castore):
           ARRAY_STOREFROM32(T_CHAR, jchar,  "%d",   STACK_INT, 0);
@@ -1767,7 +1768,7 @@ run:
           arrayOop ary = (arrayOop) STACK_OBJECT(-1);
           CHECK_NULL(ary);
           SET_STACK_INT(ary->length(), -1);
-          UPDATE_PC_AND_CONTINUE(1);
+          UPDATE_PC_AND_CONTINUE(2);
       }
 
       /* monitorenter and monitorexit for locking/unlocking an object */
@@ -1872,7 +1873,7 @@ run:
               }
             }
           }
-          UPDATE_PC_AND_TOS_AND_CONTINUE(1, -1);
+          UPDATE_PC_AND_TOS_AND_CONTINUE(2, -1);
         } else {
           istate->set_msg(more_monitors);
           UPDATE_PC_AND_RETURN(0); // Re-execute
@@ -1903,7 +1904,7 @@ run:
                 }
               }
             }
-            UPDATE_PC_AND_TOS_AND_CONTINUE(1, -1);
+            UPDATE_PC_AND_TOS_AND_CONTINUE(2, -1);
           }
           most_recent++;
         }
@@ -1922,7 +1923,7 @@ run:
         {
           u2 index;
           ConstantPoolCacheEntry* cache;
-          index = Bytes::get_native_u2(pc+1);
+          index = Bytes::get_native_u2(pc+2);
 
           // QQQ Need to make this as inlined as possible. Probably need to
           // split all the bytecode cases out so c++ compiler has a chance
@@ -2019,13 +2020,13 @@ run:
             }
           }
 
-          UPDATE_PC_AND_CONTINUE(3);
+          UPDATE_PC_AND_CONTINUE(4);
          }
 
       CASE(_putfield):
       CASE(_putstatic):
         {
-          u2 index = Bytes::get_native_u2(pc+1);
+          u2 index = Bytes::get_native_u2(pc+2);
           ConstantPoolCacheEntry* cache = cp->entry_at(index);
           if (!cache->is_resolved((Bytecodes::Code)opcode)) {
             CALL_VM(InterpreterRuntime::resolve_from_cache(THREAD, (Bytecodes::Code)opcode),
@@ -2133,11 +2134,11 @@ run:
             }
           }
 
-          UPDATE_PC_AND_TOS_AND_CONTINUE(3, count);
+          UPDATE_PC_AND_TOS_AND_CONTINUE(4, count);
         }
 
       CASE(_new): {
-        u2 index = Bytes::get_Java_u2(pc+1);
+        u2 index = Bytes::get_Java_u2(pc+2);
         ConstantPool* constants = istate->method()->constants();
         if (!constants->tag_at(index).is_unresolved_klass()) {
           // Make sure klass is initialized and doesn't have a finalizer
@@ -2189,7 +2190,7 @@ run:
               // with stores that publish the new object.
               OrderAccess::storestore();
               SET_STACK_OBJECT(result, 0);
-              UPDATE_PC_AND_TOS_AND_CONTINUE(3, 1);
+              UPDATE_PC_AND_TOS_AND_CONTINUE(4, 1);
             }
           }
         }
@@ -2201,10 +2202,10 @@ run:
         OrderAccess::storestore();
         SET_STACK_OBJECT(THREAD->vm_result(), 0);
         THREAD->set_vm_result(NULL);
-        UPDATE_PC_AND_TOS_AND_CONTINUE(3, 1);
+        UPDATE_PC_AND_TOS_AND_CONTINUE(4, 1);
       }
       CASE(_anewarray): {
-        u2 index = Bytes::get_Java_u2(pc+1);
+        u2 index = Bytes::get_Java_u2(pc+2);
         jint size = STACK_INT(-1);
         CALL_VM(InterpreterRuntime::anewarray(THREAD, METHOD->constants(), index, size),
                 handle_exception);
@@ -2213,10 +2214,10 @@ run:
         OrderAccess::storestore();
         SET_STACK_OBJECT(THREAD->vm_result(), -1);
         THREAD->set_vm_result(NULL);
-        UPDATE_PC_AND_CONTINUE(3);
+        UPDATE_PC_AND_CONTINUE(4);
       }
       CASE(_multianewarray): {
-        jint dims = *(pc+3);
+        jint dims = *(pc+4);
         jint size = STACK_INT(-1);
         // stack grows down, dimensions are up!
         jint *dimarray =
@@ -2230,12 +2231,12 @@ run:
         OrderAccess::storestore();
         SET_STACK_OBJECT(THREAD->vm_result(), -dims);
         THREAD->set_vm_result(NULL);
-        UPDATE_PC_AND_TOS_AND_CONTINUE(4, -(dims-1));
+        UPDATE_PC_AND_TOS_AND_CONTINUE(5, -(dims-1));
       }
       CASE(_checkcast):
           if (STACK_OBJECT(-1) != NULL) {
             VERIFY_OOP(STACK_OBJECT(-1));
-            u2 index = Bytes::get_Java_u2(pc+1);
+            u2 index = Bytes::get_Java_u2(pc+2);
             // Constant pool may have actual klass or unresolved klass. If it is
             // unresolved we must resolve it.
             if (METHOD->constants()->tag_at(index).is_unresolved_klass()) {
@@ -2261,7 +2262,7 @@ run:
             // Profile checkcast with null_seen and receiver.
             BI_PROFILE_UPDATE_CHECKCAST(/*null_seen=*/true, NULL);
           }
-          UPDATE_PC_AND_CONTINUE(3);
+          UPDATE_PC_AND_CONTINUE(4);
 
       CASE(_instanceof):
           if (STACK_OBJECT(-1) == NULL) {
@@ -2270,7 +2271,7 @@ run:
             BI_PROFILE_UPDATE_INSTANCEOF(/*null_seen=*/true, NULL);
           } else {
             VERIFY_OOP(STACK_OBJECT(-1));
-            u2 index = Bytes::get_Java_u2(pc+1);
+            u2 index = Bytes::get_Java_u2(pc+2);
             // Constant pool may have actual klass or unresolved klass. If it is
             // unresolved we must resolve it.
             if (METHOD->constants()->tag_at(index).is_unresolved_klass()) {
@@ -2292,19 +2293,19 @@ run:
             // Profile instanceof with null_seen and receiver.
             BI_PROFILE_UPDATE_INSTANCEOF(/*null_seen=*/false, objKlass);
           }
-          UPDATE_PC_AND_CONTINUE(3);
+          UPDATE_PC_AND_CONTINUE(4);
 
       CASE(_ldc_w):
       CASE(_ldc):
         {
           u2 index;
           bool wide = false;
-          int incr = 2; // frequent case
+          int incr = 3; // frequent case
           if (opcode == Bytecodes::_ldc) {
-            index = pc[1];
+            index = pc[2];
           } else {
-            index = Bytes::get_Java_u2(pc+1);
-            incr = 3;
+            index = Bytes::get_Java_u2(pc+2);
+            incr = 4;
             wide = true;
           }
 
@@ -2375,7 +2376,7 @@ run:
 
       CASE(_ldc2_w):
         {
-          u2 index = Bytes::get_Java_u2(pc+1);
+          u2 index = Bytes::get_Java_u2(pc+2);
 
           ConstantPool* constants = METHOD->constants();
           switch (constants->tag_at(index).value()) {
@@ -2410,7 +2411,7 @@ run:
 
           default:  ShouldNotReachHere();
           }
-          UPDATE_PC_AND_TOS_AND_CONTINUE(3, 2);
+          UPDATE_PC_AND_TOS_AND_CONTINUE(4, 2);
         }
 
       CASE(_fast_aldc_w):
@@ -2418,11 +2419,11 @@ run:
         u2 index;
         int incr;
         if (opcode == Bytecodes::_fast_aldc) {
-          index = pc[1];
-          incr = 2;
-        } else {
-          index = Bytes::get_native_u2(pc+1);
+          index = pc[2];
           incr = 3;
+        } else {
+          index = Bytes::get_native_u2(pc+2);
+          incr = 4;
         }
 
         // We are resolved if the resolved_references array contains a non-null object (CallSite, etc.)
@@ -2445,7 +2446,7 @@ run:
 
       CASE(_invokedynamic): {
 
-        u4 index = Bytes::get_native_u4(pc+1);
+        u4 index = Bytes::get_native_u4(pc+2);
         ConstantPoolCacheEntry* cache = cp->constant_pool()->invokedynamic_cp_cache_entry_at(index);
 
         // We are resolved if the resolved_references array contains a non-null object (CallSite, etc.)
@@ -2469,7 +2470,7 @@ run:
         istate->set_msg(call_method);
         istate->set_callee(method);
         istate->set_callee_entry_point(method->from_interpreted_entry());
-        istate->set_bcp_advance(5);
+        istate->set_bcp_advance(6);
 
         // Invokedynamic has got a call counter, just like an invokestatic -> increment!
         BI_PROFILE_UPDATE_CALL();
@@ -2479,7 +2480,7 @@ run:
 
       CASE(_invokehandle): {
 
-        u2 index = Bytes::get_native_u2(pc+1);
+        u2 index = Bytes::get_native_u2(pc+2);
         ConstantPoolCacheEntry* cache = cp->entry_at(index);
 
         if (! cache->is_resolved((Bytecodes::Code) opcode)) {
@@ -2500,7 +2501,7 @@ run:
         istate->set_msg(call_method);
         istate->set_callee(method);
         istate->set_callee_entry_point(method->from_interpreted_entry());
-        istate->set_bcp_advance(3);
+        istate->set_bcp_advance(4);
 
         // Invokehandle has got a call counter, just like a final call -> increment!
         BI_PROFILE_UPDATE_FINALCALL();
@@ -2509,7 +2510,7 @@ run:
       }
 
       CASE(_invokeinterface): {
-        u2 index = Bytes::get_native_u2(pc+1);
+        u2 index = Bytes::get_native_u2(pc+2);
 
         // QQQ Need to make this as inlined as possible. Probably need to split all the bytecode cases
         // out so c++ compiler has a chance for constant prop to fold everything possible away.
@@ -2573,7 +2574,7 @@ run:
             istate->set_callee_entry_point(callee->interpreter_entry());
           }
 #endif /* VM_JVMTI */
-          istate->set_bcp_advance(5);
+          istate->set_bcp_advance(6);
           UPDATE_PC_AND_RETURN(0); // I'll be back...
         }
 
@@ -2638,14 +2639,14 @@ run:
           istate->set_callee_entry_point(callee->interpreter_entry());
         }
 #endif /* VM_JVMTI */
-        istate->set_bcp_advance(5);
+        istate->set_bcp_advance(6);
         UPDATE_PC_AND_RETURN(0); // I'll be back...
       }
 
       CASE(_invokevirtual):
       CASE(_invokespecial):
       CASE(_invokestatic): {
-        u2 index = Bytes::get_native_u2(pc+1);
+        u2 index = Bytes::get_native_u2(pc+2);
 
         ConstantPoolCacheEntry* cache = cp->entry_at(index);
         // QQQ Need to make this as inlined as possible. Probably need to split all the bytecode cases
@@ -2715,7 +2716,7 @@ run:
             istate->set_callee_entry_point(callee->interpreter_entry());
           }
 #endif /* VM_JVMTI */
-          istate->set_bcp_advance(3);
+          istate->set_bcp_advance(4);
           UPDATE_PC_AND_RETURN(0); // I'll be back...
         }
       }
@@ -2723,7 +2724,7 @@ run:
       /* Allocate memory for a new java object. */
 
       CASE(_newarray): {
-        BasicType atype = (BasicType) *(pc+1);
+        BasicType atype = (BasicType) *(pc+2);
         jint size = STACK_INT(-1);
         CALL_VM(InterpreterRuntime::newarray(THREAD, atype, size),
                 handle_exception);
@@ -2733,7 +2734,7 @@ run:
         SET_STACK_OBJECT(THREAD->vm_result(), -1);
         THREAD->set_vm_result(NULL);
 
-        UPDATE_PC_AND_CONTINUE(2);
+        UPDATE_PC_AND_CONTINUE(3);
       }
 
       /* Throw an exception. */
@@ -2752,14 +2753,14 @@ run:
 
       CASE(_jsr): {
           /* push bytecode index on stack */
-          SET_STACK_ADDR(((address)pc - (intptr_t)(istate->method()->code_base()) + 3), 0);
+          SET_STACK_ADDR(((address)pc - (intptr_t)(istate->method()->code_base()) + 4), 0);
           MORE_STACK(1);
           /* FALL THROUGH */
       }
 
       CASE(_goto):
       {
-          int16_t offset = (int16_t)Bytes::get_Java_u2(pc + 1);
+          int16_t offset = (int16_t)Bytes::get_Java_u2(pc + 2);
           // Profile jump.
           BI_PROFILE_UPDATE_JUMP();
           address branch_pc = pc;
@@ -2770,14 +2771,14 @@ run:
 
       CASE(_jsr_w): {
           /* push return address on the stack */
-          SET_STACK_ADDR(((address)pc - (intptr_t)(istate->method()->code_base()) + 5), 0);
+          SET_STACK_ADDR(((address)pc - (intptr_t)(istate->method()->code_base()) + 6), 0);
           MORE_STACK(1);
           /* FALL THROUGH */
       }
 
       CASE(_goto_w):
       {
-          int32_t offset = Bytes::get_Java_u4(pc + 1);
+          int32_t offset = Bytes::get_Java_u4(pc + 2);
           // Profile jump.
           BI_PROFILE_UPDATE_JUMP();
           address branch_pc = pc;
@@ -2790,9 +2791,9 @@ run:
 
       CASE(_ret): {
           // Profile ret.
-          BI_PROFILE_UPDATE_RET(/*bci=*/((int)(intptr_t)(LOCALS_ADDR(pc[1]))));
+          BI_PROFILE_UPDATE_RET(/*bci=*/((int)(intptr_t)(LOCALS_ADDR(pc[2]))));
           // Now, update the pc.
-          pc = istate->method()->code_base() + (intptr_t)(LOCALS_ADDR(pc[1]));
+          pc = istate->method()->code_base() + (intptr_t)(LOCALS_ADDR(pc[2]));
           UPDATE_PC_AND_CONTINUE(0);
       }
 
@@ -3214,7 +3215,7 @@ run:
 
     // Normal return
     // Advance the pc and return to frame manager
-    UPDATE_PC_AND_RETURN(1);
+    UPDATE_PC_AND_RETURN(2);
   } /* handle_return: */
 
 // This is really a fatal error return

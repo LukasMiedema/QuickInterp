@@ -42,7 +42,7 @@ public class Object {
     static {
         registerNatives();
     }
-
+    
     /**
      * Constructs a new object.
      */

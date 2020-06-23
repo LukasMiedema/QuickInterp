@@ -1838,6 +1838,7 @@ bool VM_RedefineClasses::rewrite_cp_refs_in_methods(
 void VM_RedefineClasses::rewrite_cp_refs_in_method(methodHandle method,
        methodHandle *new_method_p, TRAPS) {
 
+  assert(false, "This is probably broken");
   *new_method_p = methodHandle();  // default is no new method
 
   // We cache a pointer to the bytecodes here in code_base. If GC
@@ -1854,7 +1855,7 @@ void VM_RedefineClasses::rewrite_cp_refs_in_method(methodHandle method,
   int bc_length;
   for (int bci = 0; bci < code_length; bci += bc_length) {
     address bcp = code_base + bci;
-    Bytecodes::Code c = (Bytecodes::Code)(*bcp);
+    Bytecodes::Code c = (Bytecodes::Code)READ_BYTECODE(bcp);
 
     bc_length = Bytecodes::length_for(c);
     if (bc_length == 0) {
@@ -1868,7 +1869,7 @@ void VM_RedefineClasses::rewrite_cp_refs_in_method(methodHandle method,
     switch (c) {
       case Bytecodes::_ldc:
       {
-        int cp_index = *(bcp + 1);
+        int cp_index = *(bcp + 2);
         int new_index = find_new_index(cp_index);
 
         if (StressLdcRewrite && new_index == 0) {
@@ -1915,7 +1916,7 @@ void VM_RedefineClasses::rewrite_cp_refs_in_method(methodHandle method,
             code_base = method->code_base();
             code_length = method->code_size();
             bcp = code_base + bci;
-            c = (Bytecodes::Code)(*bcp);
+            c = (Bytecodes::Code)READ_BYTECODE(bcp);
             bc_length = Bytecodes::length_for(c);
             assert(bc_length != 0, "sanity check");
           } // end we need ldc_w instead of ldc

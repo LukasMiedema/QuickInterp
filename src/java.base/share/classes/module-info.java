@@ -75,7 +75,6 @@
  * @since 9
  */
 module java.base {
-
     exports java.io;
     exports java.lang;
     exports java.lang.annotation;
@@ -152,7 +151,8 @@ module java.base {
         jdk.jartool,
         jdk.jfr,
         jdk.jlink,
-        jdk.scripting.nashorn;
+        jdk.scripting.nashorn,
+        jdk.internal.vm.si;
     exports jdk.internal.org.objectweb.asm.tree to
         jdk.jfr,
         jdk.jlink;
@@ -325,7 +325,7 @@ module java.base {
         java.prefs;
     exports sun.util.resources to
         jdk.localedata;
-
+    exports jdk.internal.vm.si;// to jdk.internal.vm.si;// (uncomment when Eclipse works with this)
 
     // the service types defined by the APIs in this module
 
@@ -365,6 +365,7 @@ module java.base {
     uses sun.util.locale.provider.LocaleDataMetaInfo;
     uses sun.util.resources.LocaleData.CommonResourceBundleProvider;
     uses sun.util.resources.LocaleData.SupplementaryResourceBundleProvider;
+    uses jdk.internal.vm.si.ClassBytecodeFormatConverter;
 
     // Built-in service providers that are located via ServiceLoader
 

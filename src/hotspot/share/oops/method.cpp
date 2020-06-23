@@ -467,8 +467,8 @@ BasicType Method::result_type() const {
 
 
 bool Method::is_empty_method() const {
-  return  code_size() == 1
-      && *code_base() == Bytecodes::_return;
+  return  code_size() == 2
+      && READ_BYTECODE(code_base()) == Bytecodes::_return;
 }
 
 
@@ -498,18 +498,18 @@ bool Method::is_vanilla_constructor() const {
   assert(signature() == vmSymbols::void_method_signature(), "Should only be called for default constructors");
   int size = code_size();
   // Check if size match
-  if (size == 0 || size % 5 != 0) return false;
+  if (size == 0 || size % 8 != 0) return false;
   address cb = code_base();
-  int last = size - 1;
-  if (cb[0] != Bytecodes::_aload_0 || cb[1] != Bytecodes::_invokespecial || cb[last] != Bytecodes::_return) {
+  int last = size - 2;
+  if (READ_BYTECODE(cb+0) != Bytecodes::_aload_0 || READ_BYTECODE(cb+2) != Bytecodes::_invokespecial || READ_BYTECODE(cb+last) != Bytecodes::_return) {
     // Does not call superclass default constructor
     return false;
   }
   // Check optional sequence
-  for (int i = 4; i < last; i += 5) {
-    if (cb[i] != Bytecodes::_aload_0) return false;
-    if (!Bytecodes::is_zero_const(Bytecodes::cast(cb[i+1]))) return false;
-    if (cb[i+2] != Bytecodes::_putfield) return false;
+  for (int i = 6; i < last; i += 8) {
+    if (READ_BYTECODE(cb+i) != Bytecodes::_aload_0) return false;
+    if (!Bytecodes::is_zero_const(Bytecodes::cast(READ_BYTECODE(cb+i+2)))) return false;
+    if (READ_BYTECODE(cb+i+4) != Bytecodes::_putfield) return false;
   }
   return true;
 }
@@ -601,11 +601,12 @@ bool Method::is_accessor() const {
 }
 
 bool Method::is_getter() const {
-  if (code_size() != 5) return false;
+  // getter: aload, getfield arg0 arg1, return
+  if (code_size() != 7) return false;
   if (size_of_parameters() != 1) return false;
   if (java_code_at(0) != Bytecodes::_aload_0)  return false;
-  if (java_code_at(1) != Bytecodes::_getfield) return false;
-  switch (java_code_at(4)) {
+  if (java_code_at(2) != Bytecodes::_getfield) return false;
+  switch (java_code_at(6)) {
     case Bytecodes::_ireturn:
     case Bytecodes::_lreturn:
     case Bytecodes::_freturn:
@@ -619,9 +620,10 @@ bool Method::is_getter() const {
 }
 
 bool Method::is_setter() const {
-  if (code_size() != 6) return false;
+  // setter: aload, xload, putfield arg0 arg1, return
+  if (code_size() != 9) return false;
   if (java_code_at(0) != Bytecodes::_aload_0) return false;
-  switch (java_code_at(1)) {
+  switch (java_code_at(2)) {
     case Bytecodes::_iload_1:
     case Bytecodes::_aload_1:
     case Bytecodes::_fload_1:
@@ -634,16 +636,16 @@ bool Method::is_setter() const {
     default:
       return false;
   }
-  if (java_code_at(2) != Bytecodes::_putfield) return false;
-  if (java_code_at(5) != Bytecodes::_return)   return false;
+  if (java_code_at(4) != Bytecodes::_putfield) return false;
+  if (java_code_at(8) != Bytecodes::_return)   return false;
   return true;
 }
 
 bool Method::is_constant_getter() const {
-  int last_index = code_size() - 1;
+  int last_index = code_size() - 2;
   // Check if the first 1-3 bytecodes are a constant push
   // and the last bytecode is a return.
-  return (2 <= code_size() && code_size() <= 4 &&
+  return (4 <= code_size() && code_size() <= 6 &&
           Bytecodes::is_const(java_code_at(0)) &&
           Bytecodes::length_for(java_code_at(0)) == last_index &&
           Bytecodes::is_return(java_code_at(last_index)));

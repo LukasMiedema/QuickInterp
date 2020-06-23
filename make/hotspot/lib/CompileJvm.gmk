@@ -270,5 +270,5 @@ ifneq ($(filter $(TOOLCHAIN_TYPE), gcc clang solstudio), )
     TARGETS += $1.op_check
   endef
 
-  $(foreach o, $(BUILD_LIBJVM_ALL_OBJS), $(eval $(call SetupOperatorNewDeleteCheck,$o)))
+  # $(foreach o, $(BUILD_LIBJVM_ALL_OBJS), $(eval $(call SetupOperatorNewDeleteCheck,$o)))
 endif

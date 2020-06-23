@@ -544,7 +544,7 @@ bool GenerateOopMap::jump_targets_do(BytecodeStream *bcs, jmpFct_t jmpFct, int *
     case Bytecodes::_ifnull:
     case Bytecodes::_ifnonnull:
       (*jmpFct)(this, bcs->dest(), data);
-      (*jmpFct)(this, bci + 3, data);
+      (*jmpFct)(this, bci + 4, data);
       break;
 
     case Bytecodes::_goto:
@@ -936,6 +936,10 @@ void GenerateOopMap::init_basic_blocks() {
   // monitor stack heights...)
 
   ALLOC_RESOURCE_ARRAY(_basic_blocks, BasicBlock, _bb_count);
+
+  if (strcmp(_method->name_and_sig_as_C_string(), "java.lang.ModuleLayer.defineModules(Ljava/lang/module/Configuration;Ljava/util/List;Ljava/util/function/Function;)Ljava/lang/ModuleLayer$Controller;") == 0) {
+      BREAKPOINT;
+  }
 
   // Make a pass through the bytecodes.  Count the number of monitorenters.
   // This can be used an upper bound on the monitor stack depth in programs
@@ -2387,8 +2391,10 @@ bool GenerateOopMap::rewrite_refval_conflict_inst(BytecodeStream *itr, int from,
 // bcN : either _aload or _astore
 // bc0 : either _aload_0 or _astore_0
 bool GenerateOopMap::rewrite_load_or_store(BytecodeStream *bcs, Bytecodes::Code bcN, Bytecodes::Code bc0, unsigned int varNo) {
+  assert(false, "This is probably broken");
   assert(bcN == Bytecodes::_astore   || bcN == Bytecodes::_aload,   "wrong argument (bcN)");
   assert(bc0 == Bytecodes::_astore_0 || bc0 == Bytecodes::_aload_0, "wrong argument (bc0)");
+
   int ilen = Bytecodes::length_at(_method(), bcs->bcp());
   int newIlen;
 

@@ -38,11 +38,11 @@
 #ifdef ASSERT
 
 void Bytecode::assert_same_format_as(Bytecodes::Code testbc, bool is_wide) const {
-  Bytecodes::Code thisbc = Bytecodes::cast(byte_at(0));
+  Bytecodes::Code thisbc = Bytecodes::cast(instr_at(0));
   if (thisbc == Bytecodes::_breakpoint)  return;  // let the assertion fail silently
   if (is_wide) {
     assert(thisbc == Bytecodes::_wide, "expected a wide instruction");
-    thisbc = Bytecodes::cast(byte_at(1));
+    thisbc = Bytecodes::cast(instr_at(2));
     if (thisbc == Bytecodes::_breakpoint)  return;
   }
   int thisflags = Bytecodes::flags(testbc, is_wide) & Bytecodes::_all_fmt_bits;
@@ -113,7 +113,7 @@ void Bytecode::assert_native_index(Bytecodes::Code bc, bool is_wide) {
 // Implementation of Bytecode_tableupswitch
 
 int Bytecode_tableswitch::dest_offset_at(int i) const {
-  return get_aligned_Java_u4_at(1 + (3 + i)*jintSize);
+  return get_aligned_Java_u4_at(2 + (3 + i)*jintSize);
 }
 
 

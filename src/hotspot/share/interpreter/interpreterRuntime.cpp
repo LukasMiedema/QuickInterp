@@ -113,10 +113,10 @@ public:
   int get_index_u2_cpcache(Bytecodes::Code bc) const
                                                  { return bytecode().get_index_u2_cpcache(bc); }
   int get_index_u4(Bytecodes::Code bc) const     { return bytecode().get_index_u4(bc); }
-  int number_of_dimensions() const               { return bcp()[3]; }
+  int number_of_dimensions() const               { return bcp()[4]; }
   ConstantPoolCacheEntry* cache_entry_at(int i) const
                                                  { return method()->constants()->cache()->entry_at(i); }
-  ConstantPoolCacheEntry* cache_entry() const    { return cache_entry_at(Bytes::get_native_u2(bcp() + 1)); }
+  ConstantPoolCacheEntry* cache_entry() const    { return cache_entry_at(Bytes::get_native_u2(bcp() + 2)); }
 
   oop callee_receiver(Symbol* signature) {
     return _last_frame.interpreter_callee_receiver(signature);

@@ -223,6 +223,8 @@
 # include "services/memoryUsage.hpp"
 # include "services/nmtCommon.hpp"
 # include "services/virtualMemoryTracker.hpp"
+# include "si/codestretcher_agent.hpp"
+# include "si/jnif.hpp"
 # include "utilities/accessFlags.hpp"
 # include "utilities/bitMap.hpp"
 # include "utilities/bitMap.inline.hpp"

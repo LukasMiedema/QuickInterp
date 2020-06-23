@@ -30,7 +30,7 @@
 inline char* ResourceArea::allocate_bytes(size_t size, AllocFailType alloc_failmode) {
 #ifdef ASSERT
   if (_nesting < 1 && !_warned++)
-    fatal("memory leak: allocating without ResourceMark");
+    //fatal("memory leak: allocating without ResourceMark");
   if (UseMallocOnly) {
     // use malloc, but save pointer in res. area for later freeing
     char** save = (char**)internal_malloc_4(sizeof(char*));

@@ -153,7 +153,7 @@ AbstractInterpreter::MethodKind AbstractInterpreter::method_kind(const methodHan
     return zerolocals_synchronized;
   }
 
-  if (RegisterFinalizersAtInit && m->code_size() == 1 &&
+  if (RegisterFinalizersAtInit && m->code_size() == 2 &&
       m->intrinsic_id() == vmIntrinsics::_Object_init) {
     // We need to execute the special return bytecode to check for
     // finalizer registration so create a normal frame.

@@ -90,12 +90,12 @@ Bytecodes::Code Bytecodes::non_breakpoint_code_at(const Method* method, address 
 int Bytecodes::special_length_at(Bytecodes::Code code, address bcp, address end) {
   switch (code) {
   case _wide:
-    if (end != NULL && bcp + 1 >= end) {
+    if (end != NULL && bcp + 2 >= end) {
       return -1; // don't read past end of code buffer
     }
-    return wide_length_for(cast(*(bcp + 1)));
+    return wide_length_for(cast(READ_BYTECODE(bcp + 2)));
   case _tableswitch:
-    { address aligned_bcp = align_up(bcp + 1, jintSize);
+    { address aligned_bcp = align_up(bcp + 2, jintSize);
       if (end != NULL && aligned_bcp + 3*jintSize >= end) {
         return -1; // don't read past end of code buffer
       }
@@ -110,7 +110,7 @@ int Bytecodes::special_length_at(Bytecodes::Code code, address bcp, address end)
   case _lookupswitch:      // fall through
   case _fast_binaryswitch: // fall through
   case _fast_linearswitch:
-    { address aligned_bcp = align_up(bcp + 1, jintSize);
+    { address aligned_bcp = align_up(bcp + 2, jintSize);
       if (end != NULL && aligned_bcp + 2*jintSize >= end) {
         return -1; // don't read past end of code buffer
       }
@@ -158,10 +158,15 @@ void Bytecodes::def(Code code, const char* name, const char* format, const char*
   assert(wide_format == NULL || format != NULL, "short form must exist if there's a wide form");
   int len  = (format      != NULL ? (int) strlen(format)      : 0);
   int wlen = (wide_format != NULL ? (int) strlen(wide_format) : 0);
+
+  // shortcode extensions
+  if (len != 0) len++;
+  if (wlen != 0) wlen+=2;
+
   _name          [code] = name;
   _result_type   [code] = result_type;
   _depth         [code] = depth;
-  _lengths       [code] = (wlen << 4) | (len & 0xF);
+  _lengths       [code] = (wlen << 4) | ((len) & 0xF);
   _java_code     [code] = java_code;
   int bc_flags = 0;
   if (can_trap)           bc_flags |= _bc_can_trap;

@@ -71,6 +71,8 @@ import jdk.internal.reflect.Reflection;
 import sun.reflect.misc.ReflectUtil;
 import sun.security.util.SecurityConstants;
 
+import jdk.internal.vm.si.ClassBytecodeFormatConverterProxy;
+
 /**
  * A class loader is an object that is responsible for loading classes. The
  * class {@code ClassLoader} is an abstract class.  Given the <a
@@ -1013,7 +1015,7 @@ public abstract class ClassLoader {
     {
         protectionDomain = preDefineClass(name, protectionDomain);
         String source = defineClassSourceLocation(protectionDomain);
-        Class<?> c = defineClass1(this, name, b, off, len, protectionDomain, source);
+        Class<?> c = defineClass1Proxy(this, name, b, off, len, protectionDomain, source);
         postDefineClass(c, protectionDomain);
         return c;
     }
@@ -1105,9 +1107,21 @@ public abstract class ClassLoader {
 
         protectionDomain = preDefineClass(name, protectionDomain);
         String source = defineClassSourceLocation(protectionDomain);
-        Class<?> c = defineClass2(this, name, b, b.position(), len, protectionDomain, source);
+        Class<?> c = defineClass2Proxy(this, name, b, b.position(), len, protectionDomain, source);
         postDefineClass(c, protectionDomain);
         return c;
+    }
+    
+    static Class<?> defineClass1Proxy(ClassLoader loader, String name, byte[] b, int off, int len,
+            ProtectionDomain pd, String source) {
+    	byte[] converted = ClassBytecodeFormatConverterProxy.convertClass(b, off, len);
+    	return defineClass1(loader, name, converted, 0, converted.length, pd, source);
+    }
+
+    static Class<?> defineClass2Proxy(ClassLoader loader, String name, java.nio.ByteBuffer b,
+            int off, int len, ProtectionDomain pd, String source) {
+    	byte[] converted = ClassBytecodeFormatConverterProxy.convertClass(b, off, len);
+    	return defineClass1(loader, name, converted, 0, converted.length, pd, source);
     }
 
     static native Class<?> defineClass1(ClassLoader loader, String name, byte[] b, int off, int len,

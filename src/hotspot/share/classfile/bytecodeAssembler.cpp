@@ -125,12 +125,12 @@ void BytecodeAssembler::xload(u4 index, u1 onebyteop, u1 twobyteop) {
 }
 
 void BytecodeAssembler::dup() {
-  _code->append(Bytecodes::_dup);
+  append((u2) Bytecodes::_dup);
 }
 
 void BytecodeAssembler::_new(Symbol* sym) {
   u2 cpool_index = _cp->klass(sym);
-  _code->append(Bytecodes::_new);
+  append((u2) Bytecodes::_new);
   append(cpool_index);
 }
 
@@ -144,17 +144,17 @@ void BytecodeAssembler::load_string(Symbol* sym) {
 }
 
 void BytecodeAssembler::ldc(u1 index) {
-  _code->append(Bytecodes::_ldc);
+  append((u2) Bytecodes::_ldc);
   append(index);
 }
 
 void BytecodeAssembler::ldc_w(u2 index) {
-  _code->append(Bytecodes::_ldc_w);
+  append((u2) Bytecodes::_ldc_w);
   append(index);
 }
 
 void BytecodeAssembler::athrow() {
-  _code->append(Bytecodes::_athrow);
+  append((u2) Bytecodes::_athrow);
 }
 
 void BytecodeAssembler::iload(u4 index) {
@@ -196,7 +196,7 @@ void BytecodeAssembler::load(BasicType bt, u4 index) {
 
 void BytecodeAssembler::checkcast(Symbol* sym) {
   u2 cpool_index = _cp->klass(sym);
-  _code->append(Bytecodes::_checkcast);
+  append((u2) Bytecodes::_checkcast);
   append(cpool_index);
 }
 
@@ -206,7 +206,7 @@ void BytecodeAssembler::invokespecial(Method* method) {
 
 void BytecodeAssembler::invokespecial(Symbol* klss, Symbol* name, Symbol* sig) {
   u2 methodref_index = _cp->methodref(klss, name, sig);
-  _code->append(Bytecodes::_invokespecial);
+  append((u2) Bytecodes::_invokespecial);
   append(methodref_index);
 }
 
@@ -216,32 +216,32 @@ void BytecodeAssembler::invokevirtual(Method* method) {
 
 void BytecodeAssembler::invokevirtual(Symbol* klss, Symbol* name, Symbol* sig) {
   u2 methodref_index = _cp->methodref(klss, name, sig);
-  _code->append(Bytecodes::_invokevirtual);
+  append((u2) Bytecodes::_invokevirtual);
   append(methodref_index);
 }
 
 void BytecodeAssembler::ireturn() {
-  _code->append(Bytecodes::_ireturn);
+  append((u2) Bytecodes::_ireturn);
 }
 
 void BytecodeAssembler::lreturn() {
-  _code->append(Bytecodes::_lreturn);
+  append((u2) Bytecodes::_lreturn);
 }
 
 void BytecodeAssembler::freturn() {
-  _code->append(Bytecodes::_freturn);
+  append((u2) Bytecodes::_freturn);
 }
 
 void BytecodeAssembler::dreturn() {
-  _code->append(Bytecodes::_dreturn);
+  append((u2) Bytecodes::_dreturn);
 }
 
 void BytecodeAssembler::areturn() {
-  _code->append(Bytecodes::_areturn);
+  append((u2) Bytecodes::_areturn);
 }
 
 void BytecodeAssembler::_return() {
-  _code->append(Bytecodes::_return);
+  append((u2) Bytecodes::_return);
 }
 
 void BytecodeAssembler::_return(BasicType bt) {

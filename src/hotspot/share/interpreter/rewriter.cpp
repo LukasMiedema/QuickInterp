@@ -137,7 +137,7 @@ void Rewriter::rewrite_Object_init(const methodHandle& method, TRAPS) {
   while (!bcs.is_last_bytecode()) {
     Bytecodes::Code opcode = bcs.raw_next();
     switch (opcode) {
-      case Bytecodes::_return: *bcs.bcp() = Bytecodes::_return_register_finalizer; break;
+      case Bytecodes::_return: WRITE_BYTECODE(bcs.bcp(), Bytecodes::_return_register_finalizer); break;
 
       case Bytecodes::_istore:
       case Bytecodes::_lstore:
@@ -171,13 +171,13 @@ void Rewriter::rewrite_member_reference(address bcp, int offset, bool reverse) {
     int  cache_index = cp_entry_to_cp_cache(cp_index);
     Bytes::put_native_u2(p, cache_index);
     if (!_method_handle_invokers.is_empty())
-      maybe_rewrite_invokehandle(p - 1, cp_index, cache_index, reverse);
+      maybe_rewrite_invokehandle(p - 2, cp_index, cache_index, reverse);
   } else {
     int cache_index = Bytes::get_native_u2(p);
     int pool_index = cp_cache_entry_pool_index(cache_index);
     Bytes::put_Java_u2(p, pool_index);
     if (!_method_handle_invokers.is_empty())
-      maybe_rewrite_invokehandle(p - 1, pool_index, cache_index, reverse);
+      maybe_rewrite_invokehandle(p - 2, pool_index, cache_index, reverse);
   }
 }
 
@@ -207,9 +207,9 @@ void Rewriter::rewrite_invokespecial(address bcp, int offset, bool reverse, bool
 // Adjust the invocation bytecode for a signature-polymorphic method (MethodHandle.invoke, etc.)
 void Rewriter::maybe_rewrite_invokehandle(address opc, int cp_index, int cache_index, bool reverse) {
   if (!reverse) {
-    if ((*opc) == (u1)Bytecodes::_invokevirtual ||
+    if (READ_BYTECODE(opc) == Bytecodes::_invokevirtual ||
         // allow invokespecial as an alias, although it would be very odd:
-        (*opc) == (u1)Bytecodes::_invokespecial) {
+        READ_BYTECODE(opc) == Bytecodes::_invokespecial) {
       assert(_pool->tag_at(cp_index).is_method(), "wrong index");
       // Determine whether this is a signature-polymorphic method.
       if (cp_index >= _method_handle_invokers.length())  return;
@@ -237,13 +237,13 @@ void Rewriter::maybe_rewrite_invokehandle(address opc, int cp_index, int cache_i
       // The basic reason for this is that such methods need an extra "appendix" argument
       // to transmit the call site's intended call type.
       if (status > 0) {
-        (*opc) = (u1)Bytecodes::_invokehandle;
+        WRITE_BYTECODE(opc, Bytecodes::_invokehandle);
       }
     }
   } else {
     // Do not need to look at cp_index.
-    if ((*opc) == (u1)Bytecodes::_invokehandle) {
-      (*opc) = (u1)Bytecodes::_invokevirtual;
+    if (READ_BYTECODE(opc) == (u1)Bytecodes::_invokehandle) {
+      WRITE_BYTECODE(opc, Bytecodes::_invokevirtual);
       // Ignore corner case of original _invokespecial instruction.
       // This is safe because (a) the signature polymorphic method was final, and
       // (b) the implementation of MethodHandle will not call invokespecial on it.
@@ -254,7 +254,7 @@ void Rewriter::maybe_rewrite_invokehandle(address opc, int cp_index, int cache_i
 
 void Rewriter::rewrite_invokedynamic(address bcp, int offset, bool reverse) {
   address p = bcp + offset;
-  assert(p[-1] == Bytecodes::_invokedynamic, "not invokedynamic bytecode");
+  assert(READ_BYTECODE(p-2) == Bytecodes::_invokedynamic, "not invokedynamic bytecode");
   if (!reverse) {
     int cp_index = Bytes::get_Java_u2(p);
     int cache_index = add_invokedynamic_cp_cache_entry(cp_index);
@@ -321,7 +321,7 @@ void Rewriter::patch_invokedynamic_bytecodes() {
 void Rewriter::maybe_rewrite_ldc(address bcp, int offset, bool is_wide,
                                  bool reverse) {
   if (!reverse) {
-    assert((*bcp) == (is_wide ? Bytecodes::_ldc_w : Bytecodes::_ldc), "not ldc bytecode");
+    assert(READ_BYTECODE(bcp) == (is_wide ? Bytecodes::_ldc_w : Bytecodes::_ldc), "not ldc bytecode");
     address p = bcp + offset;
     int cp_index = is_wide ? Bytes::get_Java_u2(p) : (u1)(*p);
     constantTag tag = _pool->tag_at(cp_index).value();
@@ -335,11 +335,11 @@ void Rewriter::maybe_rewrite_ldc(address bcp, int offset, bool is_wide,
         ) {
       int ref_index = cp_entry_to_resolved_references(cp_index);
       if (is_wide) {
-        (*bcp) = Bytecodes::_fast_aldc_w;
+        WRITE_BYTECODE(bcp, Bytecodes::_fast_aldc_w);
         assert(ref_index == (u2)ref_index, "index overflow");
         Bytes::put_native_u2(p, ref_index);
       } else {
-        (*bcp) = Bytecodes::_fast_aldc;
+        WRITE_BYTECODE(bcp, Bytecodes::_fast_aldc);
         assert(ref_index == (u1)ref_index, "index overflow");
         (*p) = (u1)ref_index;
       }
@@ -347,16 +347,16 @@ void Rewriter::maybe_rewrite_ldc(address bcp, int offset, bool is_wide,
   } else {
     Bytecodes::Code rewritten_bc =
               (is_wide ? Bytecodes::_fast_aldc_w : Bytecodes::_fast_aldc);
-    if ((*bcp) == rewritten_bc) {
+    if (READ_BYTECODE(bcp) == rewritten_bc) {
       address p = bcp + offset;
       int ref_index = is_wide ? Bytes::get_native_u2(p) : (u1)(*p);
       int pool_index = resolved_references_entry_to_pool_index(ref_index);
       if (is_wide) {
-        (*bcp) = Bytecodes::_ldc_w;
+        WRITE_BYTECODE(bcp, Bytecodes::_ldc_w);
         assert(pool_index == (u2)pool_index, "index overflow");
         Bytes::put_Java_u2(p, pool_index);
       } else {
-        (*bcp) = Bytecodes::_ldc;
+        WRITE_BYTECODE(bcp, Bytecodes::_ldc);
         assert(pool_index == (u1)pool_index, "index overflow");
         (*p) = (u1)pool_index;
       }
@@ -376,11 +376,17 @@ void Rewriter::scan_method(Method* method, bool reverse, bool* invokespecial_err
   const address code_base = method->code_base();
   const int code_length = method->code_size();
 
+  if (strcmp("java.lang.ClassLoader.getSystemClassLoader()Ljava/lang/ClassLoader;", method->name_and_sig_as_C_string()) == 0) {
+    BREAKPOINT;
+  }
+
   int bc_length;
   for (int bci = 0; bci < code_length; bci += bc_length) {
     address bcp = code_base + bci;
     int prefix_length = 0;
-    c = (Bytecodes::Code)(*bcp);
+    c = (Bytecodes::Code) READ_BYTECODE(bcp);
+
+    assert(Bytecodes::is_valid(c), "Invalid bytecode");
 
     // Since we have the code, see if we can get the length
     // directly. Some more complicated bytecodes will report
@@ -394,8 +400,8 @@ void Rewriter::scan_method(Method* method, bool reverse, bool* invokespecial_err
       // by 'wide'. We don't currently examine any of the bytecodes
       // modified by wide, but in case we do in the future...
       if (c == Bytecodes::_wide) {
-        prefix_length = 1;
-        c = (Bytecodes::Code)bcp[1];
+        prefix_length = 2;
+        c = (Bytecodes::Code) READ_BYTECODE(bcp + 2);
       }
     }
 
@@ -405,24 +411,24 @@ void Rewriter::scan_method(Method* method, bool reverse, bool* invokespecial_err
       case Bytecodes::_lookupswitch   : {
 #ifndef CC_INTERP
         Bytecode_lookupswitch bc(method, bcp);
-        (*bcp) = (
+        WRITE_BYTECODE(bcp, (
           bc.number_of_pairs() < BinarySwitchThreshold
           ? Bytecodes::_fast_linearswitch
           : Bytecodes::_fast_binaryswitch
-        );
+        ));
 #endif
         break;
       }
       case Bytecodes::_fast_linearswitch:
       case Bytecodes::_fast_binaryswitch: {
 #ifndef CC_INTERP
-        (*bcp) = Bytecodes::_lookupswitch;
+        WRITE_BYTECODE(bcp, Bytecodes::_lookupswitch);
 #endif
         break;
       }
 
       case Bytecodes::_invokespecial  : {
-        rewrite_invokespecial(bcp, prefix_length+1, reverse, invokespecial_error);
+        rewrite_invokespecial(bcp, prefix_length+2, reverse, invokespecial_error);
         break;
       }
 
@@ -437,7 +443,7 @@ void Rewriter::scan_method(Method* method, bool reverse, bool* invokespecial_err
           // The check is performed after verification and only if verification has
           // succeeded. Therefore, the class is guaranteed to be well-formed.
           InstanceKlass* klass = method->method_holder();
-          u2 bc_index = Bytes::get_Java_u2(bcp + prefix_length + 1);
+          u2 bc_index = Bytes::get_Java_u2(bcp + prefix_length + 2);
           constantPoolHandle cp(method->constants());
           Symbol* ref_class_name = cp->klass_name_at(cp->klass_ref_index_at(bc_index));
 
@@ -469,18 +475,18 @@ void Rewriter::scan_method(Method* method, bool reverse, bool* invokespecial_err
       case Bytecodes::_invokestatic   :
       case Bytecodes::_invokeinterface:
       case Bytecodes::_invokehandle   : // if reverse=true
-        rewrite_member_reference(bcp, prefix_length+1, reverse);
+        rewrite_member_reference(bcp, prefix_length+2, reverse);
         break;
       case Bytecodes::_invokedynamic:
-        rewrite_invokedynamic(bcp, prefix_length+1, reverse);
+        rewrite_invokedynamic(bcp, prefix_length+2, reverse);
         break;
       case Bytecodes::_ldc:
       case Bytecodes::_fast_aldc:  // if reverse=true
-        maybe_rewrite_ldc(bcp, prefix_length+1, false, reverse);
+        maybe_rewrite_ldc(bcp, prefix_length+2, false, reverse);
         break;
       case Bytecodes::_ldc_w:
       case Bytecodes::_fast_aldc_w:  // if reverse=true
-        maybe_rewrite_ldc(bcp, prefix_length+1, true, reverse);
+        maybe_rewrite_ldc(bcp, prefix_length+2, true, reverse);
         break;
       case Bytecodes::_jsr            : // fall through
       case Bytecodes::_jsr_w          : nof_jsrs++;                   break;

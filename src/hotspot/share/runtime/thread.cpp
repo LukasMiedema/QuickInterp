@@ -4032,6 +4032,26 @@ static OnLoadEntry_t lookup_agent_on_load(AgentLibrary* agent) {
   return lookup_on_load(agent, on_load_symbols, sizeof(on_load_symbols) / sizeof(char*));
 }
 
+static OnLoadEntry_t create_si_agent() {
+  AgentLibrary* si_agent = new AgentLibrary("codestretcher", NULL, NULL, NULL, false);
+
+  const char *on_load_symbols[] = AGENT_ONLOAD_SYMBOLS;
+  size_t num_symbols = sizeof(on_load_symbols) / sizeof(char*);
+  if (os::find_builtin_agent(si_agent, on_load_symbols, num_symbols)) {
+    si_agent->set_valid();
+  } else {
+    vm_exit_during_initialization("Failed to load SI agent");
+  }
+
+  // Find the OnLoad function.
+  OnLoadEntry_t on_load_entry =
+    CAST_TO_FN_PTR(OnLoadEntry_t, os::find_agent_function(si_agent,
+                                                          false,
+                                                          on_load_symbols,
+                                                          num_symbols));
+  return on_load_entry;
+}
+
 // For backwards compatibility with -Xrun
 // Convert libraries with no JVM_OnLoad, but which have Agent_OnLoad to be
 // treated like -agentpath:
@@ -4067,6 +4087,13 @@ void Threads::create_vm_init_agents() {
   AgentLibrary* agent;
 
   JvmtiExport::enter_onload_phase();
+
+  // Shortcode: load SI agent first
+  OnLoadEntry_t on_load_entry = create_si_agent();
+  jint err = (*on_load_entry)(&main_vm, NULL, NULL);
+  if (err != JNI_OK) {
+    vm_exit_during_initialization("SI agent library failed to init");
+  }
 
   for (agent = Arguments::agents(); agent != NULL; agent = agent->next()) {
     OnLoadEntry_t  on_load_entry = lookup_agent_on_load(agent);
