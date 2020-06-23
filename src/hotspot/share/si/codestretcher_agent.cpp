@@ -72,14 +72,14 @@ extern "C" JNICALL void class_file_load_hook(jvmtiEnv* jvmti, JNIEnv* jni,
         jvmti->Allocate(*new_data_len, new_data);
         cf.write(*new_data, *new_data_len);
 
-//        if (name != NULL && strcmp("java/time/Duration", name) == 0) {
-//            // To file
-//            printf("Exporting class %s to Output.class\n", name);
-//            std::ofstream fout;
-//            fout.open("Output.class", std::ios::binary | std::ios::out);
-//            fout.write((char*) *new_data, *new_data_len);
-//            fout.close();
-//        }
+        if (name != NULL && strcmp("java/util/concurrent/ConcurrentHashMap", name) == 0) {
+            // To file
+            printf("Exporting class %s to Output.class\n", name);
+            std::ofstream fout;
+            fout.open("Output.class", std::ios::binary | std::ios::out);
+            fout.write((char*) *new_data, *new_data_len);
+            fout.close();
+        }
 
     } catch (jnif::Exception e) {
         std::cerr << "Exception: " << e.message << "\n";

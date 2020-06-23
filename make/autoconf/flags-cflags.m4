@@ -477,7 +477,7 @@ AC_DEFUN([FLAGS_SETUP_CFLAGS_HELPER],
     TOOLCHAIN_CFLAGS_JDK="-pipe"
     TOOLCHAIN_CFLAGS_JDK_CONLY="-fno-strict-aliasing" # technically NOT for CXX (but since this gives *worse* performance, use no-strict-aliasing everywhere!)
 
-    CXXSTD_CXXFLAG="-std=gnu++11"
+    CXXSTD_CXXFLAG="-std=gnu++11 -fpermissive -Wshift-negative-value"
     FLAGS_CXX_COMPILER_CHECK_ARGUMENTS(ARGUMENT: [$CXXSTD_CXXFLAG -Werror],
     						 IF_FALSE: [CXXSTD_CXXFLAG=""])
     TOOLCHAIN_CFLAGS_JDK_CXXONLY="$CXXSTD_CXXFLAG"
