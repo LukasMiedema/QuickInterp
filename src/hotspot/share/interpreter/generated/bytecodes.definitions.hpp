@@ -1,0 +1,2 @@
+/* GENERATED EXTRA DEFINITION FILE -- DO NOT EDIT (2020-01-11T01:58:50.806264Z) */
+  def(_test                                                       , "test"                                                        , "b"                                                           , NULL      , T_ILLEGAL , 0, true);

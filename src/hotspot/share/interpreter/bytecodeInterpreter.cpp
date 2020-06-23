@@ -505,7 +505,7 @@ BytecodeInterpreter::run(interpreterState istate) {
 
 #ifdef USELABELS
   const static void* const opclabels_data[1 << 16] = {
-    #include "bytecodeInterpreter.jumptable.hpp"
+    #include "generated/bytecodeInterpreter.jumptable.hpp"
   };
   register uintptr_t *dispatch_table = (uintptr_t*)&opclabels_data[0];
 #endif /* USELABELS */
@@ -895,7 +895,7 @@ run:
       switch (opcode)
 #endif
       {
-      #include "bytecodeInterpreter.handlers.hpp"
+      #include "generated/bytecodeInterpreter.handlers.hpp"
 //      #include "bytecodeInterpreter.originalhandlers.hpp"
       DEFAULT:
           fatal("Unimplemented opcode %d = %s", opcode,

@@ -120,6 +120,9 @@ int Bytecodes::special_length_at(Bytecodes::Code code, address bcp, address end)
       // return -1 otherwise
       return (len > 0 && len == (int)len) ? len : -1;
     }
+    // superinstructions may have variable length
+#include "generated/bytecodes.length.hpp"
+
   default:
     // Note: Length functions must return <=0 for invalid bytecodes.
     return 0;
@@ -272,7 +275,7 @@ int Bytecodes::compute_flags(const char* format, int more_flags) {
 
 void Bytecodes::initialize() {
   if (_is_initialized) return;
-  assert(number_of_codes <= 256, "too many bytecodes");
+  assert(number_of_codes <= 65536, "too many bytecodes");
 
   // initialize bytecode tables - didn't use static array initializers
   // (such as {}) so we can do additional consistency checks and init-
@@ -489,6 +492,9 @@ void Bytecodes::initialize() {
   def(_goto_w              , "goto_w"              , "boooo", NULL    , T_VOID   ,  0, false);
   def(_jsr_w               , "jsr_w"               , "boooo", NULL    , T_INT    ,  0, false);
   def(_breakpoint          , "breakpoint"          , ""     , NULL    , T_VOID   ,  0, true);
+
+  // superinstructions
+#include "generated/bytecodes.definitions.hpp"
 
   //  JVM bytecodes
   //  bytecode               bytecode name           format   wide f.   result tp  stk traps  std code

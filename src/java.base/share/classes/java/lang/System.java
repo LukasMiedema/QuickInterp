@@ -2120,7 +2120,7 @@ public final class System {
                 return cl.createOrGetClassLoaderValueMap();
             }
             public Class<?> defineClass(ClassLoader loader, String name, byte[] b, ProtectionDomain pd, String source) {
-                return ClassLoader.defineClass1Proxy(loader, name, b, 0, b.length, pd, source);
+                return ClassLoader.defineClass1(loader, name, b, 0, b.length, pd, source);
             }
             public Class<?> findBootstrapClassOrNull(ClassLoader cl, String name) {
                 return cl.findBootstrapClassOrNull(name);

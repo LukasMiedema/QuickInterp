@@ -1,43 +1,68 @@
 package jdk.internal.vm.si.impl;
 
-import jdk.internal.org.objectweb.asm.ClassReader;
-import jdk.internal.org.objectweb.asm.ClassVisitor;
-import jdk.internal.org.objectweb.asm.ClassWriter;
-import jdk.internal.org.objectweb.asm.Opcodes;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.PrintWriter;
+
 import jdk.internal.vm.si.ClassBytecodeFormatConverter;
+import jdk.internal.vm.si.impl.asm.ClassReader;
+import jdk.internal.vm.si.impl.asm.ClassVisitor;
+import jdk.internal.vm.si.impl.asm.ClassWriter;
+import jdk.internal.vm.si.impl.asm.MethodVisitor;
+import jdk.internal.vm.si.impl.asm.Opcodes;
+import jdk.internal.vm.si.impl.asm.commons.GeneratorAdapter;
+import jdk.internal.vm.si.impl.asm.util.TraceClassVisitor;
 
 public class ClassBytecodeFormatConverterImpl implements ClassBytecodeFormatConverter {
 	
-	public byte[] convertClass(byte[] b, int off, int len) {
-		return b;
-		//return convertClassInternal(new ClassReader(b, off, len));
-	}
+	public byte[] convertClass(byte[] input) {
+		System.out.println("Hello from Java!");
+		byte[] result = convertClassInternal(new ClassReader(input));
 
-	public byte[] convertClass(java.nio.ByteBuffer b, int off, int len) {
-		byte[] output = new byte[len];
-		b.get(output, off, len);
-		return output;
-		//return convertClassInternal(new ClassReader(output));
+		writeToFile(input, new File("beforejava.class"));
+		writeToFile(result, new File("afterjava.class"));
+		return result;
 	}
 	
+	private static void writeToFile(byte[] bytes, File file) {
+		try (FileOutputStream stream = new FileOutputStream(file)) {
+		    stream.write(bytes);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
 	
 	private static byte[] convertClassInternal(ClassReader reader) {
-		var classVisitor = new ConverterClassVisitor();
-		var classWriter = new ClassWriter(0);
-		
-		System.out.println("Reading " + reader.getClassName());
-		
-		//reader.accept(classVisitor, ClassReader.SKIP_DEBUG);
-		reader.accept(classWriter, ClassReader.SKIP_DEBUG);
-		
-		return classWriter.toByteArray();
+		try (var writer = new PrintWriter(System.out)) {
+			var classWriter = new ClassWriter(0);
+			var tracer = new TraceClassVisitor(classWriter, writer);
+			var classTransformer = new NaiveSiClassTransformer(tracer);
+			
+			System.out.println("Reading " + reader.getClassName());
+			reader.accept(classTransformer, 0);
+			return classWriter.toByteArray();
+		}
 	}
 	
-	static class ConverterClassVisitor extends ClassVisitor {
+	static class NaiveSiClassTransformer extends ClassVisitor {
 
-		public ConverterClassVisitor() {
-			super(Opcodes.ASM6);
+		public NaiveSiClassTransformer(ClassVisitor delegate) {
+			super(Opcodes.ASM7, delegate);
 		}
-		
+
+		@Override
+		public MethodVisitor visitMethod(int access, String name, String descriptor, String signature,
+				String[] exceptions) {
+			MethodVisitor delegate = super.visitMethod(access, name, descriptor, signature, exceptions);
+			return new NaiveSiMethodTransformer(delegate, access, name, descriptor);
+		}		
+	}
+	
+	static class NaiveSiMethodTransformer extends GeneratorAdapter {
+
+		public NaiveSiMethodTransformer(MethodVisitor delegate, int access, String name, String descriptor) {
+			super(Opcodes.ASM7, delegate, access, name, descriptor);
+		}
 	}
 }

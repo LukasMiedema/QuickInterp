@@ -13,11 +13,7 @@ public class ClassBytecodeFormatConverterProxy {
 			.findFirst()
 			.orElseThrow();
 	
-	public static byte[] convertClass(byte[] b, int off, int len) {
-		return IMPL.convertClass(b, off, len);
-	}
-
-	public static byte[] convertClass(java.nio.ByteBuffer b, int off, int len) {
-		return IMPL.convertClass(b, off, len);
+	public static byte[] convertClass(byte[] b) {
+		return IMPL.convertClass(b);
 	}
 }

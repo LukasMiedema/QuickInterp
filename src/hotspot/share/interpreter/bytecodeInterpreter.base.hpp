@@ -1501,9 +1501,9 @@
 #define INSTR_fast_aldc_or_fast_aldc_w(pc,offset,is_wide)\
   u2 index;                                           \
   if (is_wide) {                                      \
-    index = (pc)[2];                                  \
-  } else {                                            \
     index = Bytes::get_native_u2((pc)+2);             \
+  } else {                                            \
+    index = (pc)[2];                                  \
   }                                                   \
                                                       \
   ConstantPool* constants = METHOD->constants();      \

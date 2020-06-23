@@ -1,5 +1,5 @@
-/* GENERATED HANDLER FILE -- DO NOT EDIT (2019-11-13T05:12:07.226552Z) */
-#include "bytecodeInterpreter.base.hpp"
+/* GENERATED HANDLER FILE -- DO NOT EDIT (2020-01-11T01:58:50.880878Z) */
+#include "../bytecodeInterpreter.base.hpp"
 
 CASE(_nop): { // nop
   { INSTR_nop(pc+0,0); }
@@ -1012,4 +1012,10 @@ CASE(_return_register_finalizer): { // return_register_finalizer
 CASE(_invokehandle): { // invokehandle
   { INSTR_invokehandle(pc+0,0); }
   puts("Overrun of invokehandle handler");
+}
+CASE(_test): { // test
+  { INSTR_iload_1(pc+0,0); }
+  { INSTR_iload_2(pc+2,1); }
+  { INSTR_end_sequence(pc+4,2); }
+  puts("Overrun of test handler");
 }

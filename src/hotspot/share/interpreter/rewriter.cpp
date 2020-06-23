@@ -376,10 +376,6 @@ void Rewriter::scan_method(Method* method, bool reverse, bool* invokespecial_err
   const address code_base = method->code_base();
   const int code_length = method->code_size();
 
-  if (strcmp("java.lang.ClassLoader.getSystemClassLoader()Ljava/lang/ClassLoader;", method->name_and_sig_as_C_string()) == 0) {
-    BREAKPOINT;
-  }
-
   int bc_length;
   for (int bci = 0; bci < code_length; bci += bc_length) {
     address bcp = code_base + bci;
