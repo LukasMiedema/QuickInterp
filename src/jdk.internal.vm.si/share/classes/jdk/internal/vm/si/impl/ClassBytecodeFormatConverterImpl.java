@@ -17,10 +17,10 @@ import jdk.internal.vm.si.impl.asm.util.TraceClassVisitor;
 public class ClassBytecodeFormatConverterImpl implements ClassBytecodeFormatConverter {
 	
 	public byte[] convertClass(byte[] input) {
-		System.out.println("Hello from Java!");
+		writeToFile(input, new File("beforejava.class"));
+		
 		byte[] result = convertClassInternal(new ClassReader(input));
 
-		writeToFile(input, new File("beforejava.class"));
 		writeToFile(result, new File("afterjava.class"));
 		return result;
 	}
@@ -34,15 +34,14 @@ public class ClassBytecodeFormatConverterImpl implements ClassBytecodeFormatConv
 	}
 	
 	private static byte[] convertClassInternal(ClassReader reader) {
-		try (var writer = new PrintWriter(System.out)) {
-			var classWriter = new ClassWriter(0);
-			var tracer = new TraceClassVisitor(classWriter, writer);
-			var classTransformer = new NaiveSiClassTransformer(tracer);
-			
-			System.out.println("Reading " + reader.getClassName());
-			reader.accept(classTransformer, 0);
-			return classWriter.toByteArray();
-		}
+		var writer = new PrintWriter(System.out);
+		var classWriter = new ClassWriter(0);
+		var tracer = new TraceClassVisitor(classWriter, writer);
+		
+		var classTransformer = new NaiveSiClassTransformer(tracer);
+		
+		reader.accept(classTransformer, 0);
+		return classWriter.toByteArray();
 	}
 	
 	static class NaiveSiClassTransformer extends ClassVisitor {

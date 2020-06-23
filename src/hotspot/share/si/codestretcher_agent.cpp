@@ -30,11 +30,11 @@ extern "C" JNICALL void class_file_load_hook(jvmtiEnv *jvmti, JNIEnv *jni,
   stretcher.rewrite_class_native();
 
   std::string unique_key = stretcher.compute_unique_key();
-  //std::cout << "Native rewriting " << unique_key << '\n';
+  // std::cout << "Native rewriting " << unique_key << '\n';
 
-  std::string target("testbench.Main!8890990170487007973");
+  // std::string target("testbench.Main!8890990170487007973");
 
-  if (target == unique_key /*boot_classlist.find(unique_key) == boot_classlist.end()*/) {
+  if (unique_key.rfind("testbench.Main!", 0) == 0 /*boot_classlist.find(unique_key) == boot_classlist.end()*/) {
     // Not on the boot list --> rewrite in java
     std::cout << "> JNI rewriting " << unique_key << '\n';
     stretcher.rewrite_class_java(jni);
