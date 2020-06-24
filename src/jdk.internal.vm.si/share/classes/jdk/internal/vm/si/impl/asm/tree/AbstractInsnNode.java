@@ -87,6 +87,9 @@ public abstract class AbstractInsnNode {
 
 	/** The type of {@link LineNumberNode} "instructions". */
 	public static final int LINE = 15;
+	
+	/** The type of {@link SuperInstrInsnNode} "instruction". */
+	public static final int SUPERINSTR_INSN = 16;
 
 	/** The opcode of this instruction. */
 	protected int opcode;

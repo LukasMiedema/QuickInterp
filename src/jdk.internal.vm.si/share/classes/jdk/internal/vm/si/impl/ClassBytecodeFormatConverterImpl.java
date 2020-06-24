@@ -7,12 +7,9 @@ import java.io.PrintWriter;
 
 import jdk.internal.vm.si.ClassBytecodeFormatConverter;
 import jdk.internal.vm.si.impl.asm.ClassReader;
-import jdk.internal.vm.si.impl.asm.ClassVisitor;
 import jdk.internal.vm.si.impl.asm.ClassWriter;
-import jdk.internal.vm.si.impl.asm.MethodVisitor;
-import jdk.internal.vm.si.impl.asm.Opcodes;
-import jdk.internal.vm.si.impl.asm.commons.GeneratorAdapter;
 import jdk.internal.vm.si.impl.asm.util.TraceClassVisitor;
+import jdk.internal.vm.si.impl.naive.TableSiConverter;
 
 public class ClassBytecodeFormatConverterImpl implements ClassBytecodeFormatConverter {
 	
@@ -34,34 +31,11 @@ public class ClassBytecodeFormatConverterImpl implements ClassBytecodeFormatConv
 	}
 	
 	private static byte[] convertClassInternal(ClassReader reader) {
-		var writer = new PrintWriter(System.out);
-		var classWriter = new ClassWriter(0);
-		var tracer = new TraceClassVisitor(classWriter, writer);
+		var writer = new ClassWriter(0);
+
+		var converter = new TableSiConverter();
+		converter.convert(reader, writer);
 		
-		var classTransformer = new NaiveSiClassTransformer(tracer);
-		
-		reader.accept(classTransformer, 0);
-		return classWriter.toByteArray();
-	}
-	
-	static class NaiveSiClassTransformer extends ClassVisitor {
-
-		public NaiveSiClassTransformer(ClassVisitor delegate) {
-			super(Opcodes.ASM7, delegate);
-		}
-
-		@Override
-		public MethodVisitor visitMethod(int access, String name, String descriptor, String signature,
-				String[] exceptions) {
-			MethodVisitor delegate = super.visitMethod(access, name, descriptor, signature, exceptions);
-			return new NaiveSiMethodTransformer(delegate, access, name, descriptor);
-		}		
-	}
-	
-	static class NaiveSiMethodTransformer extends GeneratorAdapter {
-
-		public NaiveSiMethodTransformer(MethodVisitor delegate, int access, String name, String descriptor) {
-			super(Opcodes.ASM7, delegate, access, name, descriptor);
-		}
+		return writer.toByteArray();
 	}
 }

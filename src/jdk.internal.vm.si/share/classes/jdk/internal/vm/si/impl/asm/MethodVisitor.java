@@ -360,6 +360,31 @@ public abstract class MethodVisitor {
 			mv.visitInsn(opcode);
 		}
 	}
+	
+	/**
+	 * Visits a zero operand instruction.
+	 *
+	 * @param opcode the opcode of the instruction to be visited. This opcode is
+	 *               either NOP, ACONST_NULL, ICONST_M1, ICONST_0, ICONST_1,
+	 *               ICONST_2, ICONST_3, ICONST_4, ICONST_5, LCONST_0, LCONST_1,
+	 *               FCONST_0, FCONST_1, FCONST_2, DCONST_0, DCONST_1, IALOAD,
+	 *               LALOAD, FALOAD, DALOAD, AALOAD, BALOAD, CALOAD, SALOAD,
+	 *               IASTORE, LASTORE, FASTORE, DASTORE, AASTORE, BASTORE, CASTORE,
+	 *               SASTORE, POP, POP2, DUP, DUP_X1, DUP_X2, DUP2, DUP2_X1,
+	 *               DUP2_X2, SWAP, IADD, LADD, FADD, DADD, ISUB, LSUB, FSUB, DSUB,
+	 *               IMUL, LMUL, FMUL, DMUL, IDIV, LDIV, FDIV, DDIV, IREM, LREM,
+	 *               FREM, DREM, INEG, LNEG, FNEG, DNEG, ISHL, LSHL, ISHR, LSHR,
+	 *               IUSHR, LUSHR, IAND, LAND, IOR, LOR, IXOR, LXOR, I2L, I2F, I2D,
+	 *               L2I, L2F, L2D, F2I, F2L, F2D, D2I, D2L, D2F, I2B, I2C, I2S,
+	 *               LCMP, FCMPL, FCMPG, DCMPL, DCMPG, IRETURN, LRETURN, FRETURN,
+	 *               DRETURN, ARETURN, RETURN, ARRAYLENGTH, ATHROW, MONITORENTER, or
+	 *               MONITOREXIT.
+	 */
+	public void visitInsnOperands(final int opcode) {
+		if (mv != null) {
+			mv.visitInsnOperands(opcode);
+		}
+	}
 
 	/**
 	 * Visits an instruction with a single int operand.
@@ -382,6 +407,28 @@ public abstract class MethodVisitor {
 			mv.visitIntInsn(opcode, operand);
 		}
 	}
+	
+	/**
+	 * Visits an instruction with a single int operand.
+	 *
+	 * @param opcode  the opcode of the instruction to be visited. This opcode is
+	 *                either BIPUSH, SIPUSH or NEWARRAY.
+	 * @param operand the operand of the instruction to be visited.<br>
+	 *                When opcode is BIPUSH, operand value should be between
+	 *                Byte.MIN_VALUE and Byte.MAX_VALUE. <br>
+	 *                When opcode is SIPUSH, operand value should be between
+	 *                Short.MIN_VALUE and Short.MAX_VALUE. <br>
+	 *                When opcode is NEWARRAY, operand value should be one of
+	 *                {@link Opcodes#T_BOOLEAN}, {@link Opcodes#T_CHAR},
+	 *                {@link Opcodes#T_FLOAT}, {@link Opcodes#T_DOUBLE},
+	 *                {@link Opcodes#T_BYTE}, {@link Opcodes#T_SHORT},
+	 *                {@link Opcodes#T_INT} or {@link Opcodes#T_LONG}.
+	 */
+	public void visitIntInsnOperands(final int opcode, final int operand) {
+		if (mv != null) {
+			mv.visitIntInsnOperands(opcode, operand);
+		}
+	}
 
 	/**
 	 * Visits a local variable instruction. A local variable instruction is an
@@ -396,6 +443,22 @@ public abstract class MethodVisitor {
 	public void visitVarInsn(final int opcode, final int var) {
 		if (mv != null) {
 			mv.visitVarInsn(opcode, var);
+		}
+	}
+	
+	/**
+	 * Visits a local variable instruction. A local variable instruction is an
+	 * instruction that loads or stores the value of a local variable.
+	 *
+	 * @param opcode the opcode of the local variable instruction to be visited.
+	 *               This opcode is either ILOAD, LLOAD, FLOAD, DLOAD, ALOAD,
+	 *               ISTORE, LSTORE, FSTORE, DSTORE, ASTORE or RET.
+	 * @param var    the operand of the instruction to be visited. This operand is
+	 *               the index of a local variable.
+	 */
+	public void visitVarInsnOperands(final int opcode, final int var) {
+		if (mv != null) {
+			mv.visitVarInsnOperands(opcode, var);
 		}
 	}
 
@@ -414,6 +477,22 @@ public abstract class MethodVisitor {
 			mv.visitTypeInsn(opcode, type);
 		}
 	}
+	
+	/**
+	 * Visits a type instruction. A type instruction is an instruction that takes
+	 * the internal name of a class as parameter.
+	 *
+	 * @param opcode the opcode of the type instruction to be visited. This opcode
+	 *               is either NEW, ANEWARRAY, CHECKCAST or INSTANCEOF.
+	 * @param type   the operand of the instruction to be visited. This operand must
+	 *               be the internal name of an object or array class (see
+	 *               {@link Type#getInternalName()}).
+	 */
+	public void visitTypeInsnOperands(final int opcode, final String type) {
+		if (mv != null) {
+			mv.visitTypeInsnOperands(opcode, type);
+		}
+	}
 
 	/**
 	 * Visits a field instruction. A field instruction is an instruction that loads
@@ -430,6 +509,24 @@ public abstract class MethodVisitor {
 	public void visitFieldInsn(final int opcode, final String owner, final String name, final String descriptor) {
 		if (mv != null) {
 			mv.visitFieldInsn(opcode, owner, name, descriptor);
+		}
+	}
+	
+	/**
+	 * Visits a field instruction operands. A field instruction is an instruction that loads
+	 * or stores the value of a field of an object.
+	 *
+	 * @param opcode     the opcode of the type instruction to be visited. This
+	 *                   opcode is either GETSTATIC, PUTSTATIC, GETFIELD or
+	 *                   PUTFIELD.
+	 * @param owner      the internal name of the field's owner class (see
+	 *                   {@link Type#getInternalName()}).
+	 * @param name       the field's name.
+	 * @param descriptor the field's descriptor (see {@link Type}).
+	 */
+	public void visitFieldInsnOperands(final int opcode, final String owner, final String name, final String descriptor) {
+		if (mv != null) {
+			mv.visitFieldInsnOperands(opcode, owner, name, descriptor);
 		}
 	}
 
@@ -480,6 +577,33 @@ public abstract class MethodVisitor {
 			mv.visitMethodInsn(opcode & ~Opcodes.SOURCE_MASK, owner, name, descriptor, isInterface);
 		}
 	}
+	
+	/**
+	 * Visits a method instruction. A method instruction is an instruction that
+	 * invokes a method.
+	 *
+	 * @param opcode      the opcode of the type instruction to be visited. This
+	 *                    opcode is either INVOKEVIRTUAL, INVOKESPECIAL,
+	 *                    INVOKESTATIC or INVOKEINTERFACE.
+	 * @param owner       the internal name of the method's owner class (see
+	 *                    {@link Type#getInternalName()}).
+	 * @param name        the method's name.
+	 * @param descriptor  the method's descriptor (see {@link Type}).
+	 * @param isInterface if the method's owner class is an interface.
+	 */
+	public void visitMethodInsnOperands(final int opcode, final String owner, final String name, final String descriptor,
+			final boolean isInterface) {
+		if (api < Opcodes.ASM5 && (opcode & Opcodes.SOURCE_DEPRECATED) == 0) {
+			if (isInterface != (opcode == Opcodes.INVOKEINTERFACE)) {
+				throw new UnsupportedOperationException("INVOKESPECIAL/STATIC on interfaces requires ASM5");
+			}
+			visitMethodInsn(opcode, owner, name, descriptor);
+			return;
+		}
+		if (mv != null) {
+			mv.visitMethodInsnOperands(opcode & ~Opcodes.SOURCE_MASK, owner, name, descriptor, isInterface);
+		}
+	}
 
 	/**
 	 * Visits an invokedynamic instruction.
@@ -505,6 +629,31 @@ public abstract class MethodVisitor {
 			mv.visitInvokeDynamicInsn(name, descriptor, bootstrapMethodHandle, bootstrapMethodArguments);
 		}
 	}
+	
+	/**
+	 * Visits an invokedynamic instruction.
+	 *
+	 * @param name                     the method's name.
+	 * @param descriptor               the method's descriptor (see {@link Type}).
+	 * @param bootstrapMethodHandle    the bootstrap method.
+	 * @param bootstrapMethodArguments the bootstrap method constant arguments. Each
+	 *                                 argument must be an {@link Integer},
+	 *                                 {@link Float}, {@link Long}, {@link Double},
+	 *                                 {@link String}, {@link Type}, {@link Handle}
+	 *                                 or {@link ConstantDynamic} value. This method
+	 *                                 is allowed to modify the content of the array
+	 *                                 so a caller should expect that this array may
+	 *                                 change.
+	 */
+	public void visitInvokeDynamicInsnOperands(final String name, final String descriptor, final Handle bootstrapMethodHandle,
+			final Object... bootstrapMethodArguments) {
+		if (api < Opcodes.ASM5) {
+			throw new UnsupportedOperationException(REQUIRES_ASM5);
+		}
+		if (mv != null) {
+			mv.visitInvokeDynamicInsnOperands(name, descriptor, bootstrapMethodHandle, bootstrapMethodArguments);
+		}
+	}
 
 	/**
 	 * Visits a jump instruction. A jump instruction is an instruction that may jump
@@ -521,6 +670,24 @@ public abstract class MethodVisitor {
 	public void visitJumpInsn(final int opcode, final Label label) {
 		if (mv != null) {
 			mv.visitJumpInsn(opcode, label);
+		}
+	}
+	
+	/**
+	 * Visits a jump instruction. A jump instruction is an instruction that may jump
+	 * to another instruction.
+	 *
+	 * @param opcode the opcode of the type instruction to be visited. This opcode
+	 *               is either IFEQ, IFNE, IFLT, IFGE, IFGT, IFLE, IF_ICMPEQ,
+	 *               IF_ICMPNE, IF_ICMPLT, IF_ICMPGE, IF_ICMPGT, IF_ICMPLE,
+	 *               IF_ACMPEQ, IF_ACMPNE, GOTO, JSR, IFNULL or IFNONNULL.
+	 * @param label  the operand of the instruction to be visited. This operand is a
+	 *               label that designates the instruction to which the jump
+	 *               instruction may jump.
+	 */
+	public void visitJumpInsnOperands(final int opcode, final Label label) {
+		if (mv != null) {
+			mv.visitJumpInsnOperands(opcode, label);
 		}
 	}
 
@@ -598,6 +765,65 @@ public abstract class MethodVisitor {
 			mv.visitLdcInsn(value);
 		}
 	}
+	
+	/**
+	 * Visits a LDC instruction. Note that new constant types may be added in future
+	 * versions of the Java Virtual Machine. To easily detect new constant types,
+	 * implementations of this method should check for unexpected constant types,
+	 * like this:
+	 *
+	 * <pre>
+	 * if (cst instanceof Integer) {
+	 * 	// ...
+	 * } else if (cst instanceof Float) {
+	 * 	// ...
+	 * } else if (cst instanceof Long) {
+	 * 	// ...
+	 * } else if (cst instanceof Double) {
+	 * 	// ...
+	 * } else if (cst instanceof String) {
+	 * 	// ...
+	 * } else if (cst instanceof Type) {
+	 * 	int sort = ((Type) cst).getSort();
+	 * 	if (sort == Type.OBJECT) {
+	 * 		// ...
+	 * 	} else if (sort == Type.ARRAY) {
+	 * 		// ...
+	 * 	} else if (sort == Type.METHOD) {
+	 * 		// ...
+	 * 	} else {
+	 * 		// throw an exception
+	 * 	}
+	 * } else if (cst instanceof Handle) {
+	 * 	// ...
+	 * } else if (cst instanceof ConstantDynamic) {
+	 * 	// ...
+	 * } else {
+	 * 	// throw an exception
+	 * }
+	 * </pre>
+	 *
+	 * @param value the constant to be loaded on the stack. This parameter must be a
+	 *              non null {@link Integer}, a {@link Float}, a {@link Long}, a
+	 *              {@link Double}, a {@link String}, a {@link Type} of OBJECT or
+	 *              ARRAY sort for {@code .class} constants, for classes whose
+	 *              version is 49, a {@link Type} of METHOD sort for MethodType, a
+	 *              {@link Handle} for MethodHandle constants, for classes whose
+	 *              version is 51 or a {@link ConstantDynamic} for a constant
+	 *              dynamic for classes whose version is 55.
+	 */
+	public void visitLdcInsnOperands(final int opcode, final Object value) {
+		if (api < Opcodes.ASM5
+				&& (value instanceof Handle || (value instanceof Type && ((Type) value).getSort() == Type.METHOD))) {
+			throw new UnsupportedOperationException(REQUIRES_ASM5);
+		}
+		if (api < Opcodes.ASM7 && value instanceof ConstantDynamic) {
+			throw new UnsupportedOperationException("This feature requires ASM7");
+		}
+		if (mv != null) {
+			mv.visitLdcInsnOperands(opcode, value);
+		}
+	}
 
 	/**
 	 * Visits an IINC instruction.
@@ -608,6 +834,18 @@ public abstract class MethodVisitor {
 	public void visitIincInsn(final int var, final int increment) {
 		if (mv != null) {
 			mv.visitIincInsn(var, increment);
+		}
+	}
+	
+	/**
+	 * Visits an IINC instruction.
+	 *
+	 * @param var       index of the local variable to be incremented.
+	 * @param increment amount to increment the local variable by.
+	 */
+	public void visitIincInsnOperands(final int var, final int increment) {
+		if (mv != null) {
+			mv.visitIincInsnOperands(var, increment);
 		}
 	}
 
@@ -625,6 +863,21 @@ public abstract class MethodVisitor {
 			mv.visitTableSwitchInsn(min, max, dflt, labels);
 		}
 	}
+	
+	/**
+	 * Visits a TABLESWITCH instruction.
+	 *
+	 * @param min    the minimum key value.
+	 * @param max    the maximum key value.
+	 * @param dflt   beginning of the default handler block.
+	 * @param labels beginnings of the handler blocks. {@code labels[i]} is the
+	 *               beginning of the handler block for the {@code min + i} key.
+	 */
+	public void visitTableSwitchInsnOperands(final int min, final int max, final Label dflt, final Label... labels) {
+		if (mv != null) {
+			mv.visitTableSwitchInsnOperands(min, max, dflt, labels);
+		}
+	}
 
 	/**
 	 * Visits a LOOKUPSWITCH instruction.
@@ -639,6 +892,20 @@ public abstract class MethodVisitor {
 			mv.visitLookupSwitchInsn(dflt, keys, labels);
 		}
 	}
+	
+	/**
+	 * Visits a LOOKUPSWITCH instruction.
+	 *
+	 * @param dflt   beginning of the default handler block.
+	 * @param keys   the values of the keys.
+	 * @param labels beginnings of the handler blocks. {@code labels[i]} is the
+	 *               beginning of the handler block for the {@code keys[i]} key.
+	 */
+	public void visitLookupSwitchInsnOperands(final Label dflt, final int[] keys, final Label[] labels) {
+		if (mv != null) {
+			mv.visitLookupSwitchInsnOperands(dflt, keys, labels);
+		}
+	}
 
 	/**
 	 * Visits a MULTIANEWARRAY instruction.
@@ -649,6 +916,18 @@ public abstract class MethodVisitor {
 	public void visitMultiANewArrayInsn(final String descriptor, final int numDimensions) {
 		if (mv != null) {
 			mv.visitMultiANewArrayInsn(descriptor, numDimensions);
+		}
+	}
+	
+	/**
+	 * Visits a MULTIANEWARRAY instruction.
+	 *
+	 * @param descriptor    an array type descriptor (see {@link Type}).
+	 * @param numDimensions the number of dimensions of the array to allocate.
+	 */
+	public void visitMultiANewArrayInsnOperands(final String descriptor, final int numDimensions) {
+		if (mv != null) {
+			mv.visitMultiANewArrayInsnOperands(descriptor, numDimensions);
 		}
 	}
 
@@ -837,6 +1116,16 @@ public abstract class MethodVisitor {
 	public void visitEnd() {
 		if (mv != null) {
 			mv.visitEnd();
+		}
+	}
+
+	/**
+	 * Visit the raw opcode, without operands. Implementations need not support this.
+	 * @param opcode
+	 */
+	public void visitOpcode(int opcode) {
+		if (mv != null) {
+			mv.visitOpcode(opcode);
 		}
 	}
 }

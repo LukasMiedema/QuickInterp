@@ -220,11 +220,11 @@ public enum BytecodePrimitive {
 	breakpoint		(0xca,			null,	NO_SUPERINSTRUCTION),
 	fast_aldc		(230,	 3,  1,	"j"),
 	fast_aldc_w		(231,	 4,  1,	"JJ"),
-	
 	return_register_finalizer
 					(232, 			"",	NO_SUPERINSTRUCTION),
 	invokehandle	(233,			"JJ",	NO_SUPERINSTRUCTION),
 	
+	profile			(234,			"", NO_SUPERINSTRUCTION),
 	end_sequence	(-1,	 0,	 0,	null,	TERMINAL);
 	
 	/*

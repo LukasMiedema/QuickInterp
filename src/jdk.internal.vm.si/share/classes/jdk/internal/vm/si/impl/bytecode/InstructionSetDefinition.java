@@ -9,7 +9,7 @@ import java.util.List;
 public class InstructionSetDefinition {
 	
 	public static final boolean DEBUG = false;
-	private int nextOpcode = 0;
+	private int nextOpcode = 238;
 	
 	public static InstructionSetDefinition defaultDefinition() {
 		InstructionSetDefinition definition = new InstructionSetDefinition();
@@ -62,5 +62,13 @@ public class InstructionSetDefinition {
 	
 	public List<InstructionDefinition> getInstructions() {
 		return instructions;
+	}
+
+	public int getNextOpcode() {
+		return nextOpcode;
+	}
+
+	public void setNextOpcode(int nextOpcode) {
+		this.nextOpcode = nextOpcode;
 	}
 }

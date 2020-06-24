@@ -27,6 +27,9 @@
 // THE POSSIBILITY OF SUCH DAMAGE.
 package jdk.internal.vm.si.impl.asm;
 
+import jdk.internal.vm.si.impl.bytecode.Instruction;
+import jdk.internal.vm.si.impl.bytecode.InstructionDefinition;
+
 /**
  * A {@link MethodVisitor} that generates a corresponding 'method_info'
  * structure, as defined in the Java Virtual Machine Specification (JVMS).
@@ -909,6 +912,11 @@ final class MethodWriter extends MethodVisitor {
 		lastBytecodeOffset = code.length;
 		// Add the instruction to the bytecode of the method.
 		code.putShort(opcode);
+		visitInsnOperands(opcode);
+	}
+	
+	@Override
+	public void visitInsnOperands(final int opcode) {		
 		// If needed, update the maximum stack size and number of locals, and stack map
 		// frames.
 		if (currentBasicBlock != null) {
@@ -926,16 +934,24 @@ final class MethodWriter extends MethodVisitor {
 			}
 		}
 	}
-
+	
 	@Override
 	public void visitIntInsn(final int opcode, final int operand) {
 		lastBytecodeOffset = code.length;
+		code.putShort(opcode);
+		
+		visitIntInsnOperands(opcode, operand);
+	}
+
+	@Override
+	public void visitIntInsnOperands(final int opcode, final int operand) {
 		// Add the instruction to the bytecode of the method.
 		if (opcode == Opcodes.SIPUSH) {
-			code.put22(opcode, operand);
+			code.putShort(operand);
 		} else { // BIPUSH or NEWARRAY
-			code.put21(opcode, operand);
+			code.putByte_(operand);
 		}
+		
 		// If needed, update the maximum stack size and number of locals, and stack map
 		// frames.
 		if (currentBasicBlock != null) {
@@ -951,17 +967,26 @@ final class MethodWriter extends MethodVisitor {
 			}
 		}
 	}
-
+	
 	@Override
 	public void visitVarInsn(final int opcode, final int var) {
 		lastBytecodeOffset = code.length;
 		// Add the instruction to the bytecode of the method.
 		if (var < 4 && opcode != Opcodes.RET) {
+			int baseOpcode;
 			int optimizedOpcode;
-			if (opcode < Opcodes.ISTORE) {
-				optimizedOpcode = Constants.ILOAD_0 + ((opcode - Opcodes.ILOAD) << 2) + var;
+			
+			if (opcode >= Constants.ILOAD_0 && opcode <= Constants.ALOAD_3)
+				baseOpcode = Opcodes.ILOAD + ((opcode - Constants.ILOAD_0) >> 2);
+			else if (opcode >= Constants.ISTORE_0 && opcode <= Constants.ASTORE_3)
+				baseOpcode = Opcodes.ISTORE + ((opcode - Constants.ISTORE_0) >> 2);
+			else
+				baseOpcode = opcode;
+			
+			if (baseOpcode < Opcodes.ISTORE) {
+				optimizedOpcode = Constants.ILOAD_0 + ((baseOpcode - Opcodes.ILOAD) << 2) + var;
 			} else {
-				optimizedOpcode = Constants.ISTORE_0 + ((opcode - Opcodes.ISTORE) << 2) + var;
+				optimizedOpcode = Constants.ISTORE_0 + ((baseOpcode - Opcodes.ISTORE) << 2) + var;
 			}
 			code.putShort(optimizedOpcode);
 		} else if (var >= 256) {
@@ -1016,15 +1041,90 @@ final class MethodWriter extends MethodVisitor {
 			// block after
 			// each xSTORE instruction, which is what we do here.
 			visitLabel(new Label());
+		}	
+	}
+
+	@Override
+	public void visitVarInsnOperands(final int opcode, final int var) {
+		// Do not optimize the bytecode but take it as given
+		boolean hasOperand = true;
+
+		if (opcode >= Constants.ILOAD_0 && opcode <= Constants.ALOAD_3)
+			hasOperand = false;
+		else if (opcode >= Constants.ISTORE_0 && opcode <= Constants.ASTORE_3)
+			hasOperand = false;
+		else
+			hasOperand = true;
+		
+		if (var >= 256)
+			throw new IllegalArgumentException("Wide var insn operations not supported at this time");
+		
+		if (hasOperand) {
+			// Actually do something
+			code.putByte_(var);
+		}
+		
+		// If needed, update the maximum stack size and number of locals, and stack map
+		// frames.
+		if (currentBasicBlock != null) {
+			if (compute == COMPUTE_ALL_FRAMES || compute == COMPUTE_INSERTED_FRAMES) {
+				currentBasicBlock.frame.execute(opcode, var, null, null);
+			} else {
+				if (opcode == Opcodes.RET) {
+					// No stack size delta.
+					currentBasicBlock.flags |= Label.FLAG_SUBROUTINE_END;
+					currentBasicBlock.outputStackSize = (short) relativeStackSize;
+					endCurrentBasicBlockWithNoSuccessor();
+				} else { // xLOAD or xSTORE
+					int size = relativeStackSize + STACK_SIZE_DELTA[opcode];
+					if (size > maxRelativeStackSize) {
+						maxRelativeStackSize = size;
+					}
+					relativeStackSize = size;
+				}
+			}
+		}
+		if (compute != COMPUTE_NOTHING) {
+			int currentMaxLocals;
+			if (opcode == Opcodes.LLOAD || opcode == Opcodes.DLOAD || opcode == Opcodes.LSTORE
+					|| opcode == Opcodes.DSTORE) {
+				currentMaxLocals = var + 2;
+			} else {
+				currentMaxLocals = var + 1;
+			}
+			if (currentMaxLocals > maxLocals) {
+				maxLocals = currentMaxLocals;
+			}
+		}
+		if (opcode >= Opcodes.ISTORE && compute == COMPUTE_ALL_FRAMES && firstHandler != null) {
+			// If there are exception handler blocks, each instruction within a handler
+			// range is, in
+			// theory, a basic block (since execution can jump from this instruction to the
+			// exception
+			// handler). As a consequence, the local variable types at the beginning of the
+			// handler
+			// block should be the merge of the local variable types at all the instructions
+			// within the
+			// handler range. However, instead of creating a basic block for each
+			// instruction, we can
+			// get the same result in a more efficient way. Namely, by starting a new basic
+			// block after
+			// each xSTORE instruction, which is what we do here.
+			visitLabel(new Label());
 		}
 	}
 
 	@Override
 	public void visitTypeInsn(final int opcode, final String type) {
 		lastBytecodeOffset = code.length;
-		// Add the instruction to the bytecode of the method.
+		code.putShort(opcode);
+		visitTypeInsnOperands(opcode, type);
+	}
+	
+	@Override
+	public void visitTypeInsnOperands(final int opcode, final String type) {
 		Symbol typeSymbol = symbolTable.addConstantClass(type);
-		code.put22(opcode, typeSymbol.index);
+		code.putShort(typeSymbol.index);
 		// If needed, update the maximum stack size and number of locals, and stack map
 		// frames.
 		if (currentBasicBlock != null) {
@@ -1045,9 +1145,15 @@ final class MethodWriter extends MethodVisitor {
 	@Override
 	public void visitFieldInsn(final int opcode, final String owner, final String name, final String descriptor) {
 		lastBytecodeOffset = code.length;
+		code.putShort(opcode);
+		visitFieldInsnOperands(opcode, owner, name, descriptor);
+	}
+	
+	@Override
+	public void visitFieldInsnOperands(final int opcode, final String owner, final String name, final String descriptor) {
 		// Add the instruction to the bytecode of the method.
 		Symbol fieldrefSymbol = symbolTable.addConstantFieldref(owner, name, descriptor);
-		code.put22(opcode, fieldrefSymbol.index);
+		code.putShort(fieldrefSymbol.index);
 		// If needed, update the maximum stack size and number of locals, and stack map
 		// frames.
 		if (currentBasicBlock != null) {
@@ -1078,18 +1184,22 @@ final class MethodWriter extends MethodVisitor {
 			}
 		}
 	}
-
+	
 	@Override
 	public void visitMethodInsn(final int opcode, final String owner, final String name, final String descriptor,
 			final boolean isInterface) {
 		lastBytecodeOffset = code.length;
-		// Add the instruction to the bytecode of the method.
+		code.putShort(opcode);
+		visitMethodInsnOperands(opcode, owner, name, descriptor, isInterface);
+	}
+
+	@Override
+	public void visitMethodInsnOperands(final int opcode, final String owner, final String name, final String descriptor,
+			final boolean isInterface) {
 		Symbol methodrefSymbol = symbolTable.addConstantMethodref(owner, name, descriptor, isInterface);
+		code.putShort(methodrefSymbol.index);
 		if (opcode == Opcodes.INVOKEINTERFACE) {
-			code.put22(Opcodes.INVOKEINTERFACE, methodrefSymbol.index)
-					.put11_(methodrefSymbol.getArgumentsAndReturnSizes() >> 2, 0);
-		} else {
-			code.put22(opcode, methodrefSymbol.index);
+			code.put11_(methodrefSymbol.getArgumentsAndReturnSizes() >> 2, 0);
 		}
 		// If needed, update the maximum stack size and number of locals, and stack map
 		// frames.
@@ -1112,16 +1222,22 @@ final class MethodWriter extends MethodVisitor {
 			}
 		}
 	}
-
+	
 	@Override
 	public void visitInvokeDynamicInsn(final String name, final String descriptor, final Handle bootstrapMethodHandle,
 			final Object... bootstrapMethodArguments) {
 		lastBytecodeOffset = code.length;
+		code.putShort(Opcodes.INVOKEDYNAMIC);
+		visitInvokeDynamicInsnOperands(name, descriptor, bootstrapMethodHandle, bootstrapMethodArguments);
+	}
+
+	@Override
+	public void visitInvokeDynamicInsnOperands(final String name, final String descriptor, final Handle bootstrapMethodHandle,
+			final Object... bootstrapMethodArguments) {
 		// Add the instruction to the bytecode of the method.
 		Symbol invokeDynamicSymbol = symbolTable.addConstantInvokeDynamic(name, descriptor, bootstrapMethodHandle,
 				bootstrapMethodArguments);
-		code.put22(Opcodes.INVOKEDYNAMIC, invokeDynamicSymbol.index);
-		code.putShort(0);
+		code.put22(invokeDynamicSymbol.index, 0);
 		// If needed, update the maximum stack size and number of locals, and stack map
 		// frames.
 		if (currentBasicBlock != null) {
@@ -1138,7 +1254,7 @@ final class MethodWriter extends MethodVisitor {
 			}
 		}
 	}
-
+	
 	@Override
 	public void visitJumpInsn(final int opcode, final Label label) {
 		lastBytecodeOffset = code.length;
@@ -1185,13 +1301,13 @@ final class MethodWriter extends MethodVisitor {
 				// The instruction after the GOTO_W becomes the target of the IFNOT instruction.
 				nextInsnIsJumpTarget = true;
 			}
-			label.put(code, code.length - 1, true);
+			label.put(code, code.length - 2, true);
 		} else if (baseOpcode != opcode) {
 			// Case of a GOTO_W or JSR_W specified by the user (normally ClassReader when
 			// used to remove
 			// ASM specific instructions). In this case we keep the original instruction.
 			code.putShort(opcode);
-			label.put(code, code.length - 1, true);
+			label.put(code, code.length - 2, true);
 		} else {
 			// Case of a jump with an offset >= -32768, or of a jump with an unknown offset.
 			// In these
@@ -1199,7 +1315,96 @@ final class MethodWriter extends MethodVisitor {
 			// ClassReader ->
 			// ClassWriter round trip if it turns out that 2 bytes are not sufficient).
 			code.putShort(baseOpcode);
-			label.put(code, code.length - 1, false);
+			label.put(code, code.length - 2, false);
+		}
+
+		// If needed, update the maximum stack size and number of locals, and stack map
+		// frames.
+		if (currentBasicBlock != null) {
+			Label nextBasicBlock = null;
+			if (compute == COMPUTE_ALL_FRAMES) {
+				currentBasicBlock.frame.execute(baseOpcode, 0, null, null);
+				// Record the fact that 'label' is the target of a jump instruction.
+				label.getCanonicalInstance().flags |= Label.FLAG_JUMP_TARGET;
+				// Add 'label' as a successor of the current basic block.
+				addSuccessorToCurrentBasicBlock(Edge.JUMP, label);
+				if (baseOpcode != Opcodes.GOTO) {
+					// The next instruction starts a new basic block (except for GOTO: by default
+					// the code
+					// following a goto is unreachable - unless there is an explicit label for it -
+					// and we
+					// should not compute stack frame types for its instructions).
+					nextBasicBlock = new Label();
+				}
+			} else if (compute == COMPUTE_INSERTED_FRAMES) {
+				currentBasicBlock.frame.execute(baseOpcode, 0, null, null);
+			} else if (compute == COMPUTE_MAX_STACK_AND_LOCAL_FROM_FRAMES) {
+				// No need to update maxRelativeStackSize (the stack size delta is always
+				// negative).
+				relativeStackSize += STACK_SIZE_DELTA[baseOpcode];
+			} else {
+				if (baseOpcode == Opcodes.JSR) {
+					// Record the fact that 'label' designates a subroutine, if not already done.
+					if ((label.flags & Label.FLAG_SUBROUTINE_START) == 0) {
+						label.flags |= Label.FLAG_SUBROUTINE_START;
+						hasSubroutines = true;
+					}
+					currentBasicBlock.flags |= Label.FLAG_SUBROUTINE_CALLER;
+					// Note that, by construction in this method, a block which calls a subroutine
+					// has at
+					// least two successors in the control flow graph: the first one (added below)
+					// leads to
+					// the instruction after the JSR, while the second one (added here) leads to the
+					// JSR
+					// target. Note that the first successor is virtual (it does not correspond to a
+					// possible
+					// execution path): it is only used to compute the successors of the basic
+					// blocks ending
+					// with a ret, in {@link Label#addSubroutineRetSuccessors}.
+					addSuccessorToCurrentBasicBlock(relativeStackSize + 1, label);
+					// The instruction after the JSR starts a new basic block.
+					nextBasicBlock = new Label();
+				} else {
+					// No need to update maxRelativeStackSize (the stack size delta is always
+					// negative).
+					relativeStackSize += STACK_SIZE_DELTA[baseOpcode];
+					addSuccessorToCurrentBasicBlock(relativeStackSize, label);
+				}
+			}
+			// If the next instruction starts a new basic block, call visitLabel to add the
+			// label of this
+			// instruction as a successor of the current block, and to start a new basic
+			// block.
+			if (nextBasicBlock != null) {
+				if (nextInsnIsJumpTarget) {
+					nextBasicBlock.flags |= Label.FLAG_JUMP_TARGET;
+				}
+				visitLabel(nextBasicBlock);
+			}
+			if (baseOpcode == Opcodes.GOTO) {
+				endCurrentBasicBlockWithNoSuccessor();
+			}
+		}		
+	}
+
+	@Override
+	public void visitJumpInsnOperands(final int opcode, final Label label) {
+		// Add the instruction to the bytecode of the method.
+		// Compute the 'base' opcode, i.e. GOTO or JSR if opcode is GOTO_W or JSR_W,
+		// otherwise opcode.
+		int baseOpcode = opcode >= Constants.GOTO_W ? opcode - Constants.WIDE_JUMP_OPCODE_DELTA : opcode;
+		boolean isWide = baseOpcode != opcode;
+		boolean nextInsnIsJumpTarget = false;
+		if ((label.flags & Label.FLAG_RESOLVED) != 0 && label.bytecodeOffset - code.length < Short.MIN_VALUE) {
+			if (!isWide) {
+				throw new IllegalArgumentException("Operand requires a wide instruction but opcode is not wide"); 
+			}
+		}
+		
+		if (isWide) {
+			label.put(code, code.length - 2, true);
+		} else {
+			label.put(code, code.length - 2, false);
 		}
 
 		// If needed, update the maximum stack size and number of locals, and stack map
@@ -1360,13 +1565,14 @@ final class MethodWriter extends MethodVisitor {
 			currentBasicBlock = label;
 		}
 	}
-
+	
 	@Override
 	public void visitLdcInsn(final Object value) {
 		lastBytecodeOffset = code.length;
-		// Add the instruction to the bytecode of the method.
 		Symbol constantSymbol = symbolTable.addConstant(value);
 		int constantIndex = constantSymbol.index;
+		
+		// Add the instruction to the bytecode of the method.
 		char firstDescriptorChar;
 		boolean isLongOrDouble = constantSymbol.tag == Symbol.CONSTANT_LONG_TAG
 				|| constantSymbol.tag == Symbol.CONSTANT_DOUBLE_TAG
@@ -1374,19 +1580,37 @@ final class MethodWriter extends MethodVisitor {
 						&& ((firstDescriptorChar = constantSymbol.value.charAt(0)) == 'J'
 								|| firstDescriptorChar == 'D'));
 		if (isLongOrDouble) {
-			code.put22(Constants.LDC2_W, constantIndex);
+			code.putShort(Constants.LDC2_W);
+			visitLdcInsnOperands(Constants.LDC2_W, value);
 		} else if (constantIndex >= 256) {
-			code.put22(Constants.LDC_W, constantIndex);
+			code.putShort(Constants.LDC_W);
+			visitLdcInsnOperands(Constants.LDC_W, value);
 		} else {
-			code.put21(Opcodes.LDC, constantIndex);
+			code.putShort(Constants.LDC);
+			visitLdcInsnOperands(Constants.LDC, value);
 		}
+	}
+	
+	@Override
+	public void visitLdcInsnOperands(final int opcode, final Object value) {
+		
+		Symbol constantSymbol = symbolTable.addConstant(value);
+		int constantIndex = constantSymbol.index;
+		boolean isWide = opcode != Constants.LDC;
+		
+		if (isWide) {
+			code.putShort(constantIndex);
+		} else {
+			code.putByte_(constantIndex);
+		}
+
 		// If needed, update the maximum stack size and number of locals, and stack map
 		// frames.
 		if (currentBasicBlock != null) {
 			if (compute == COMPUTE_ALL_FRAMES || compute == COMPUTE_INSERTED_FRAMES) {
 				currentBasicBlock.frame.execute(Opcodes.LDC, 0, constantSymbol, symbolTable);
 			} else {
-				int size = relativeStackSize + (isLongOrDouble ? 2 : 1);
+				int size = relativeStackSize + (isWide ? 2 : 1);
 				if (size > maxRelativeStackSize) {
 					maxRelativeStackSize = size;
 				}
@@ -1395,6 +1619,27 @@ final class MethodWriter extends MethodVisitor {
 		}
 	}
 
+	@Override
+	public void visitIincInsnOperands(final int var, final int increment) {
+		// Add the instruction to the bytecode of the method.
+		if ((var > 255) || (increment > 127) || (increment < -128)) {
+			throw new IllegalArgumentException("wide LVT indices not supported at this time for iinc, given " + var);
+		} else {
+			code.put11_(var, increment);
+		}
+		// If needed, update the maximum stack size and number of locals, and stack map
+		// frames.
+		if (currentBasicBlock != null && (compute == COMPUTE_ALL_FRAMES || compute == COMPUTE_INSERTED_FRAMES)) {
+			currentBasicBlock.frame.execute(Opcodes.IINC, var, null, null);
+		}
+		if (compute != COMPUTE_NOTHING) {
+			int currentMaxLocals = var + 1;
+			if (currentMaxLocals > maxLocals) {
+				maxLocals = currentMaxLocals;
+			}
+		}		
+	}
+	
 	@Override
 	public void visitIincInsn(final int var, final int increment) {
 		lastBytecodeOffset = code.length;
@@ -1416,12 +1661,17 @@ final class MethodWriter extends MethodVisitor {
 			}
 		}
 	}
-
+	
 	@Override
 	public void visitTableSwitchInsn(final int min, final int max, final Label dflt, final Label... labels) {
 		lastBytecodeOffset = code.length;
-		// Add the instruction to the bytecode of the method.
-		code.putShort(Opcodes.TABLESWITCH).putByteArray(null, 0, (4 - code.length % 4) % 4);
+		code.putShort(Opcodes.TABLESWITCH);
+		visitTableSwitchInsnOperands(min, max, dflt, labels);
+	}
+
+	@Override
+	public void visitTableSwitchInsnOperands(final int min, final int max, final Label dflt, final Label... labels) {
+		code.putByteArray(null, 0, (4 - code.length % 4) % 4);
 		dflt.put(code, lastBytecodeOffset, true);
 		code.putInt(min).putInt(max);
 		for (Label label : labels) {
@@ -1431,12 +1681,18 @@ final class MethodWriter extends MethodVisitor {
 		// frames.
 		visitSwitchInsn(dflt, labels);
 	}
-
+	
 	@Override
 	public void visitLookupSwitchInsn(final Label dflt, final int[] keys, final Label[] labels) {
 		lastBytecodeOffset = code.length;
 		// Add the instruction to the bytecode of the method.
-		code.putShort(Opcodes.LOOKUPSWITCH).putByteArray(null, 0, (4 - code.length % 4) % 4);
+		code.putShort(Opcodes.LOOKUPSWITCH);
+		visitLookupSwitchInsnOperands(dflt, keys, labels);
+	}
+
+	@Override
+	public void visitLookupSwitchInsnOperands(final Label dflt, final int[] keys, final Label[] labels) {
+		code.putByteArray(null, 0, (4 - code.length % 4) % 4);
 		dflt.put(code, lastBytecodeOffset, true);
 		code.putInt(labels.length);
 		for (int i = 0; i < labels.length; ++i) {
@@ -1473,13 +1729,18 @@ final class MethodWriter extends MethodVisitor {
 			endCurrentBasicBlockWithNoSuccessor();
 		}
 	}
-
+	
 	@Override
 	public void visitMultiANewArrayInsn(final String descriptor, final int numDimensions) {
 		lastBytecodeOffset = code.length;
-		// Add the instruction to the bytecode of the method.
+		code.putShort(Opcodes.MULTIANEWARRAY);
+		visitMultiANewArrayInsnOperands(descriptor, numDimensions);
+	}
+
+	@Override
+	public void visitMultiANewArrayInsnOperands(final String descriptor, final int numDimensions) {
 		Symbol descSymbol = symbolTable.addConstantClass(descriptor);
-		code.put22(Opcodes.MULTIANEWARRAY, descSymbol.index).putByte_(numDimensions);
+		code.putShort(descSymbol.index).putByte_(numDimensions);
 		// If needed, update the maximum stack size and number of locals, and stack map
 		// frames.
 		if (currentBasicBlock != null) {
@@ -1844,6 +2105,12 @@ final class MethodWriter extends MethodVisitor {
 		}
 		this.maxStack = maxStackSize;
 	}
+	
+	@Override
+	public void visitOpcode(int opcode) {
+		lastBytecodeOffset = code.length;
+		code.putShort(opcode);
+	}
 
 	@Override
 	public void visitEnd() {
@@ -1863,6 +2130,7 @@ final class MethodWriter extends MethodVisitor {
 	private void addSuccessorToCurrentBasicBlock(final int info, final Label successor) {
 		currentBasicBlock.outgoingEdges = new Edge(info, successor, currentBasicBlock.outgoingEdges);
 	}
+
 
 	/**
 	 * Ends the current basic block. This method must be used in the case where the

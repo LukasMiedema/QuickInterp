@@ -1,9 +1,12 @@
 package jdk.internal.vm.si.impl.bytecode;
 
+import java.io.Serializable;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class InstructionDefinition {
+public class InstructionDefinition implements Serializable {
+	private static final long serialVersionUID = 1L;
+	
 	private final String name;
 	private final List<BytecodePrimitive> primitives;
 	private final int opcode;

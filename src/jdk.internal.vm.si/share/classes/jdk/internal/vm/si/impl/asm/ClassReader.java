@@ -2201,8 +2201,7 @@ public class ClassReader {
 			case Constants.ALOAD_1:
 			case Constants.ALOAD_2:
 			case Constants.ALOAD_3:
-				opcode -= Constants.ILOAD_0;
-				methodVisitor.visitVarInsn(Opcodes.ILOAD + (opcode >> 2), opcode & 0x3);
+				methodVisitor.visitVarInsn(opcode, (opcode - Constants.ILOAD_0) & 0x3);
 				currentOffset += 2;
 				break;
 			case Constants.ISTORE_0:
@@ -2225,8 +2224,7 @@ public class ClassReader {
 			case Constants.ASTORE_1:
 			case Constants.ASTORE_2:
 			case Constants.ASTORE_3:
-				opcode -= Constants.ISTORE_0;
-				methodVisitor.visitVarInsn(Opcodes.ISTORE + (opcode >> 2), opcode & 0x3);
+				methodVisitor.visitVarInsn(opcode, (opcode - Constants.ISTORE_0) & 0x3);
 				currentOffset += 2;
 				break;
 			case Constants.IFEQ:
