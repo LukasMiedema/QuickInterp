@@ -465,7 +465,7 @@
 #define INSTR_lneg(pc,offset)                         \
   SET_STACK_LONG(VMlongNeg(STACK_LONG(offset-1)), offset-1);
 #define INSTR_dneg(pc,offset)                         \
-  SET_STACK_LONG(VMdoubleNeg(STACK_DOUBLE(offset-1)), offset-1);
+  SET_STACK_DOUBLE(VMdoubleNeg(STACK_DOUBLE(offset-1)), offset-1);
 
 // (+2,0)
 #define INSTR_i2f(pc,offset)                          \

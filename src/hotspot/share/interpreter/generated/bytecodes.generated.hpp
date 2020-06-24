@@ -1,2 +1,19 @@
-/* GENERATED EXTRA DECLARATION CONSTANTS FILE -- DO NOT EDIT (2020-01-11T01:58:50.682933Z) */
-    _test                                                        = 238   , // 0xee
+/* GENERATED EXTRA DECLARATION CONSTANTS FILE -- DO NOT EDIT (2020-01-29T07:36:02.733386Z) */
+    _i18                                                         = 238   , // 0xee
+    _i17                                                         = 239   , // 0xef
+    _i16                                                         = 240   , // 0xf0
+    _i15                                                         = 241   , // 0xf1
+    _i14                                                         = 242   , // 0xf2
+    _i13                                                         = 243   , // 0xf3
+    _i12                                                         = 244   , // 0xf4
+    _i27                                                         = 245   , // 0xf5
+    _i26                                                         = 246   , // 0xf6
+    _i25                                                         = 247   , // 0xf7
+    _i24                                                         = 248   , // 0xf8
+    _i23                                                         = 249   , // 0xf9
+    _i22                                                         = 250   , // 0xfa
+    _i34                                                         = 251   , // 0xfb
+    _i33                                                         = 252   , // 0xfc
+    _i32                                                         = 253   , // 0xfd
+    _i43                                                         = 254   , // 0xfe
+    _i42                                                         = 255   , // 0xff

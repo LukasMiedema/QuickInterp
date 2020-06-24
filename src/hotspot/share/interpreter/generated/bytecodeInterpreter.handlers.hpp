@@ -1,4 +1,4 @@
-/* GENERATED HANDLER FILE -- DO NOT EDIT (2020-01-11T01:58:50.880878Z) */
+/* GENERATED HANDLER FILE -- DO NOT EDIT (2020-01-29T07:36:03.161989Z) */
 #include "../bytecodeInterpreter.base.hpp"
 
 CASE(_nop): { // nop
@@ -1013,9 +1013,151 @@ CASE(_invokehandle): { // invokehandle
   { INSTR_invokehandle(pc+0,0); }
   puts("Overrun of invokehandle handler");
 }
-CASE(_test): { // test
+CASE(_i18): { // i18
+  { INSTR_astore_2(pc+0,0); }
+  { INSTR_aload_2(pc+2,-1); }
+  { INSTR_arraylength(pc+4,0); }
+  { INSTR_istore_3(pc+6,0); }
+  { INSTR_iconst_0(pc+8,-1); }
+  { INSTR_istore(pc+10,0); }
+  { INSTR_iload(pc+13,-1); }
+  { INSTR_iload_3(pc+16,0); }
+  { INSTR_end_sequence(pc+18,1); }
+  puts("Overrun of i18 handler");
+}
+CASE(_i17): { // i17
+  { INSTR_astore_2(pc+0,0); }
+  { INSTR_aload_2(pc+2,-1); }
+  { INSTR_arraylength(pc+4,0); }
+  { INSTR_istore_3(pc+6,0); }
+  { INSTR_iconst_0(pc+8,-1); }
+  { INSTR_istore(pc+10,0); }
+  { INSTR_iload(pc+13,-1); }
+  { INSTR_end_sequence(pc+16,0); }
+  puts("Overrun of i17 handler");
+}
+CASE(_i16): { // i16
+  { INSTR_astore_2(pc+0,0); }
+  { INSTR_aload_2(pc+2,-1); }
+  { INSTR_arraylength(pc+4,0); }
+  { INSTR_istore_3(pc+6,0); }
+  { INSTR_iconst_0(pc+8,-1); }
+  { INSTR_istore(pc+10,0); }
+  { INSTR_end_sequence(pc+13,-1); }
+  puts("Overrun of i16 handler");
+}
+CASE(_i15): { // i15
+  { INSTR_astore_2(pc+0,0); }
+  { INSTR_aload_2(pc+2,-1); }
+  { INSTR_arraylength(pc+4,0); }
+  { INSTR_istore_3(pc+6,0); }
+  { INSTR_iconst_0(pc+8,-1); }
+  { INSTR_end_sequence(pc+10,0); }
+  puts("Overrun of i15 handler");
+}
+CASE(_i14): { // i14
+  { INSTR_astore_2(pc+0,0); }
+  { INSTR_aload_2(pc+2,-1); }
+  { INSTR_arraylength(pc+4,0); }
+  { INSTR_istore_3(pc+6,0); }
+  { INSTR_end_sequence(pc+8,-1); }
+  puts("Overrun of i14 handler");
+}
+CASE(_i13): { // i13
+  { INSTR_astore_2(pc+0,0); }
+  { INSTR_aload_2(pc+2,-1); }
+  { INSTR_arraylength(pc+4,0); }
+  { INSTR_end_sequence(pc+6,0); }
+  puts("Overrun of i13 handler");
+}
+CASE(_i12): { // i12
+  { INSTR_astore_2(pc+0,0); }
+  { INSTR_aload_2(pc+2,-1); }
+  { INSTR_end_sequence(pc+4,0); }
+  puts("Overrun of i12 handler");
+}
+CASE(_i27): { // i27
+  { INSTR_aload_2(pc+0,0); }
+  { INSTR_iload(pc+2,1); }
+  { INSTR_iaload(pc+5,2); }
+  { INSTR_istore(pc+7,1); }
+  { INSTR_aload_1(pc+10,0); }
+  { INSTR_aload_0(pc+12,1); }
+  { INSTR_iload(pc+14,2); }
+  { INSTR_end_sequence(pc+17,3); }
+  puts("Overrun of i27 handler");
+}
+CASE(_i26): { // i26
+  { INSTR_aload_2(pc+0,0); }
+  { INSTR_iload(pc+2,1); }
+  { INSTR_iaload(pc+5,2); }
+  { INSTR_istore(pc+7,1); }
+  { INSTR_aload_1(pc+10,0); }
+  { INSTR_aload_0(pc+12,1); }
+  { INSTR_end_sequence(pc+14,2); }
+  puts("Overrun of i26 handler");
+}
+CASE(_i25): { // i25
+  { INSTR_aload_2(pc+0,0); }
+  { INSTR_iload(pc+2,1); }
+  { INSTR_iaload(pc+5,2); }
+  { INSTR_istore(pc+7,1); }
+  { INSTR_aload_1(pc+10,0); }
+  { INSTR_end_sequence(pc+12,1); }
+  puts("Overrun of i25 handler");
+}
+CASE(_i24): { // i24
+  { INSTR_aload_2(pc+0,0); }
+  { INSTR_iload(pc+2,1); }
+  { INSTR_iaload(pc+5,2); }
+  { INSTR_istore(pc+7,1); }
+  { INSTR_end_sequence(pc+10,0); }
+  puts("Overrun of i24 handler");
+}
+CASE(_i23): { // i23
+  { INSTR_aload_2(pc+0,0); }
+  { INSTR_iload(pc+2,1); }
+  { INSTR_iaload(pc+5,2); }
+  { INSTR_end_sequence(pc+7,1); }
+  puts("Overrun of i23 handler");
+}
+CASE(_i22): { // i22
+  { INSTR_aload_2(pc+0,0); }
+  { INSTR_iload(pc+2,1); }
+  { INSTR_end_sequence(pc+5,2); }
+  puts("Overrun of i22 handler");
+}
+CASE(_i34): { // i34
+  { INSTR_iconst_2(pc+0,0); }
+  { INSTR_istore_2(pc+2,1); }
+  { INSTR_iload_2(pc+4,0); }
+  { INSTR_iload_1(pc+6,1); }
+  { INSTR_end_sequence(pc+8,2); }
+  puts("Overrun of i34 handler");
+}
+CASE(_i33): { // i33
+  { INSTR_iconst_2(pc+0,0); }
+  { INSTR_istore_2(pc+2,1); }
+  { INSTR_iload_2(pc+4,0); }
+  { INSTR_end_sequence(pc+6,1); }
+  puts("Overrun of i33 handler");
+}
+CASE(_i32): { // i32
+  { INSTR_iconst_2(pc+0,0); }
+  { INSTR_istore_2(pc+2,1); }
+  { INSTR_end_sequence(pc+4,0); }
+  puts("Overrun of i32 handler");
+}
+CASE(_i43): { // i43
+  { INSTR_iload_1(pc+0,0); }
+  { INSTR_iload_2(pc+2,1); }
+  { INSTR_irem(pc+4,2); }
+  { INSTR_end_sequence(pc+6,1); }
+  puts("Overrun of i43 handler");
+}
+CASE(_i42): { // i42
   { INSTR_iload_1(pc+0,0); }
   { INSTR_iload_2(pc+2,1); }
   { INSTR_end_sequence(pc+4,2); }
-  puts("Overrun of test handler");
+  puts("Overrun of i42 handler");
 }

@@ -22,6 +22,7 @@
  *
  */
 
+#include <iostream>
 #include "precompiled.hpp"
 #include "jvm.h"
 #include "classfile/classLoader.hpp"
@@ -4090,12 +4091,20 @@ void Threads::create_vm_init_agents() {
 
   // Shortcode: load SI agent first
   OnLoadEntry_t on_load_entry = create_si_agent();
-  jint err = (*on_load_entry)(&main_vm, NULL, NULL);
+  char* si_options = NULL;
+  for (agent = Arguments::agents(); agent != NULL; agent = agent->next()) {
+    if (std::string(agent->name()) == "codestretcher")
+      si_options = agent->options();
+  }
+  jint err = (*on_load_entry)(&main_vm, si_options, NULL);
   if (err != JNI_OK) {
     vm_exit_during_initialization("SI agent library failed to init");
   }
 
   for (agent = Arguments::agents(); agent != NULL; agent = agent->next()) {
+    std::cout.flush();
+    if (std::string(agent->name()) == "codestretcher")
+      continue;
     OnLoadEntry_t  on_load_entry = lookup_agent_on_load(agent);
 
     if (on_load_entry != NULL) {

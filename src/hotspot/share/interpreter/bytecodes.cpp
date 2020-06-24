@@ -262,7 +262,7 @@ int Bytecodes::compute_flags(const char* format, int more_flags) {
       switch (this_size) {
       case 2: flags |= _fmt_has_u2; break;
       case 4: flags |= _fmt_has_u4; break;
-      default: guarantee(false, "bad rep count in format");
+      /*default: guarantee(false, "bad rep count in format");*/
       }
     }
     guarantee(has_size == 0 ||                     // no field yet

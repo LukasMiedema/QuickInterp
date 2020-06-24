@@ -15,11 +15,13 @@ using std::string;
 
 static const set<string> boot_classlist {
   // si classes
-  "jdk.internal.vm.si.ClassBytecodeFormatConverterProxy!3580459607571145728",
+  "sun.util.resources.cldr.provider.CLDRLocaleDataMetaInfo!18198788711634137309",
 
   // other
-#include "bootclasslist.txt"
+  //#include "bootclasslist.txt"
 };
+
+bool superinstructions_enabled;
 
 extern "C" JNICALL void class_file_load_hook(jvmtiEnv *jvmti, JNIEnv *jni,
     jclass class_being_redefined, jobject loader, const char *name,
@@ -30,13 +32,20 @@ extern "C" JNICALL void class_file_load_hook(jvmtiEnv *jvmti, JNIEnv *jni,
   stretcher.rewrite_class_native();
 
   std::string unique_key = stretcher.compute_unique_key();
-  // std::cout << "Native rewriting " << unique_key << '\n';
+  // std::cout << "Native rewriting " << unique_key << " with loader " << loader << '\n';
 
   // std::string target("testbench.Main!8890990170487007973");
 
-  if (unique_key.rfind("testbench.Main!", 0) == 0 /*boot_classlist.find(unique_key) == boot_classlist.end()*/) {
-    // Not on the boot list --> rewrite in java
-    std::cout << "> JNI rewriting " << unique_key << '\n';
+  //if (unique_key.rfind("testbench.Main!", 0) == 0 ) {
+  //if (boot_classlist.find(unique_key) == boot_classlist.end() && !(name == NULL && loader == NULL)) {
+  bool has_loader = loader != NULL;
+  bool is_lambda = name == NULL;
+  bool is_internal = !is_lambda && (std::string(name).rfind("jdk/internal", 0) == 0);
+  bool is_bootlisted = boot_classlist.find(unique_key) != boot_classlist.end();
+
+  if (superinstructions_enabled && has_loader && !is_internal && !is_bootlisted) {
+    // Not on the boot list and not a core classes lambda --> rewrite in java
+ //   std::cout << "  JNI rewriting " << unique_key << '\n';
     stretcher.rewrite_class_java(jni);
     if (jni->ExceptionCheck() == JNI_TRUE)
       return;
@@ -50,6 +59,8 @@ extern "C" JNICALL void class_file_load_hook(jvmtiEnv *jvmti, JNIEnv *jni,
 //      printf("Exporting class %s to Output.class\n", name);
 //      stretcher.dump_to_file("Output.class");
 //  }
+
+  stretcher.dump_to_file("class-dump/" + unique_key);
 }
 
 
@@ -70,7 +81,15 @@ extern "C" jint JNICALL Agent_OnLoad_codestretcher(JavaVM *jvm, char *options, v
   jvmtiEventCallbacks callbacks = {0};
   callbacks.ClassFileLoadHook = class_file_load_hook;
   jvmti->SetEventCallbacks(&callbacks, sizeof(callbacks));
-
   jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_CLASS_FILE_LOAD_HOOK, NULL);
+
+
+  if (options != NULL && (std::string(options).find("enable-si") != std::string::npos)) {
+    superinstructions_enabled = true;
+    std::cout << "Superinstructions enabled\n";
+  } else {
+    superinstructions_enabled = false; // only stretch code
+  }
+
   return JNI_OK;
 }

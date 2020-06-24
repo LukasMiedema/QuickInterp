@@ -203,7 +203,7 @@ class BytecodeStream: public BaseBytecodeStream {
           code = raw_code;  // wide BCs are always Java-normal
           _is_wide = true;
         }
-        assert(Bytecodes::is_java_code(code), "sanity check");
+        // assert(Bytecodes::is_java_code(code), "sanity check");
       }
     }
     _raw_code = raw_code;

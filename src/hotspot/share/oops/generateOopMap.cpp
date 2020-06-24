@@ -1634,6 +1634,7 @@ void GenerateOopMap::interp1(BytecodeStream *itr) {
     default:
          tty->print("unexpected opcode: %d\n", itr->code());
          ShouldNotReachHere();
+         // TODO: superinstructions here somehow
     break;
   }
 }

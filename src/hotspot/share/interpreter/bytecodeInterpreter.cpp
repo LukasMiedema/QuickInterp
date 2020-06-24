@@ -898,8 +898,7 @@ run:
       #include "generated/bytecodeInterpreter.handlers.hpp"
 //      #include "bytecodeInterpreter.originalhandlers.hpp"
       DEFAULT:
-          fatal("Unimplemented opcode %d = %s", opcode,
-                Bytecodes::name((Bytecodes::Code)opcode));
+          fatal("Unimplemented opcode %d in %s, bci=%d", opcode, istate->method()->name_and_sig_as_C_string(), BCI());
           goto finish;
 
       } /* switch(opc) */
