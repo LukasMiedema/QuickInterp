@@ -969,6 +969,61 @@ final class MethodWriter extends MethodVisitor {
 	}
 	
 	@Override
+	public void visitWideVarInsn(final int opcode, final int var) {
+		lastBytecodeOffset = code.length;
+		code.putShort(Constants.WIDE).put22(opcode, var);
+		
+		// If needed, update the maximum stack size and number of locals, and stack map
+		// frames.
+		if (currentBasicBlock != null) {
+			if (compute == COMPUTE_ALL_FRAMES || compute == COMPUTE_INSERTED_FRAMES) {
+				currentBasicBlock.frame.execute(opcode, var, null, null);
+			} else {
+				if (opcode == Opcodes.RET) {
+					// No stack size delta.
+					currentBasicBlock.flags |= Label.FLAG_SUBROUTINE_END;
+					currentBasicBlock.outputStackSize = (short) relativeStackSize;
+					endCurrentBasicBlockWithNoSuccessor();
+				} else { // xLOAD or xSTORE
+					int size = relativeStackSize + STACK_SIZE_DELTA[opcode];
+					if (size > maxRelativeStackSize) {
+						maxRelativeStackSize = size;
+					}
+					relativeStackSize = size;
+				}
+			}
+		}
+		if (compute != COMPUTE_NOTHING) {
+			int currentMaxLocals;
+			if (opcode == Opcodes.LLOAD || opcode == Opcodes.DLOAD || opcode == Opcodes.LSTORE
+					|| opcode == Opcodes.DSTORE) {
+				currentMaxLocals = var + 2;
+			} else {
+				currentMaxLocals = var + 1;
+			}
+			if (currentMaxLocals > maxLocals) {
+				maxLocals = currentMaxLocals;
+			}
+		}
+		if (opcode >= Opcodes.ISTORE && compute == COMPUTE_ALL_FRAMES && firstHandler != null) {
+			// If there are exception handler blocks, each instruction within a handler
+			// range is, in
+			// theory, a basic block (since execution can jump from this instruction to the
+			// exception
+			// handler). As a consequence, the local variable types at the beginning of the
+			// handler
+			// block should be the merge of the local variable types at all the instructions
+			// within the
+			// handler range. However, instead of creating a basic block for each
+			// instruction, we can
+			// get the same result in a more efficient way. Namely, by starting a new basic
+			// block after
+			// each xSTORE instruction, which is what we do here.
+			visitLabel(new Label());
+		}
+	}
+	
+	@Override
 	public void visitVarInsn(final int opcode, final int var) {
 		lastBytecodeOffset = code.length;
 		// Add the instruction to the bytecode of the method.
@@ -990,7 +1045,7 @@ final class MethodWriter extends MethodVisitor {
 			}
 			code.putShort(optimizedOpcode);
 		} else if (var >= 256) {
-			code.putShort(Constants.WIDE).put22(opcode, var);
+			throw new AssertionError("Use wide");
 		} else {
 			code.put21(opcode, var);
 		}
@@ -1041,7 +1096,7 @@ final class MethodWriter extends MethodVisitor {
 			// block after
 			// each xSTORE instruction, which is what we do here.
 			visitLabel(new Label());
-		}	
+		}
 	}
 
 	@Override
@@ -1622,11 +1677,9 @@ final class MethodWriter extends MethodVisitor {
 	@Override
 	public void visitIincInsnOperands(final int var, final int increment) {
 		// Add the instruction to the bytecode of the method.
-		if ((var > 255) || (increment > 127) || (increment < -128)) {
-			throw new IllegalArgumentException("wide LVT indices not supported at this time for iinc, given " + var);
-		} else {
-			code.put11_(var, increment);
-		}
+		if ((var & 0xff) != var)
+			throw new AssertionError("Use wide");
+		code.put11_(var, increment);
 		// If needed, update the maximum stack size and number of locals, and stack map
 		// frames.
 		if (currentBasicBlock != null && (compute == COMPUTE_ALL_FRAMES || compute == COMPUTE_INSERTED_FRAMES)) {
@@ -1643,12 +1696,28 @@ final class MethodWriter extends MethodVisitor {
 	@Override
 	public void visitIincInsn(final int var, final int increment) {
 		lastBytecodeOffset = code.length;
+		if ((var & 0xff) != var)
+			throw new AssertionError("Use wide");
 		// Add the instruction to the bytecode of the method.
-		if ((var > 255) || (increment > 127) || (increment < -128)) {
-			code.putShort(Constants.WIDE).put22(Opcodes.IINC, var).putShort(increment);
-		} else {
-			code.putShort(Opcodes.IINC).put11_(var, increment);
+		code.putShort(Opcodes.IINC).put11_(var, increment);
+		// If needed, update the maximum stack size and number of locals, and stack map
+		// frames.
+		if (currentBasicBlock != null && (compute == COMPUTE_ALL_FRAMES || compute == COMPUTE_INSERTED_FRAMES)) {
+			currentBasicBlock.frame.execute(Opcodes.IINC, var, null, null);
 		}
+		if (compute != COMPUTE_NOTHING) {
+			int currentMaxLocals = var + 1;
+			if (currentMaxLocals > maxLocals) {
+				maxLocals = currentMaxLocals;
+			}
+		}
+	}
+	
+	@Override
+	public void visitWideIincInsn(final int var, final int increment) {
+		lastBytecodeOffset = code.length;
+		code.putShort(Opcodes.WIDE)
+			.put22(Opcodes.IINC, var).putShort(increment);
 		// If needed, update the maximum stack size and number of locals, and stack map
 		// frames.
 		if (currentBasicBlock != null && (compute == COMPUTE_ALL_FRAMES || compute == COMPUTE_INSERTED_FRAMES)) {

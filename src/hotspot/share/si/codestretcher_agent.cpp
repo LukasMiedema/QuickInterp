@@ -16,11 +16,7 @@ using std::set;
 using std::string;
 
 static const set<string> boot_classlist {
-  // si classes
   "sun.util.resources.cldr.provider.CLDRLocaleDataMetaInfo!18198788711634137309",
-
-  // other
-  //#include "bootclasslist.txt"
 };
 
 extern "C" JNICALL void class_file_load_hook(jvmtiEnv *jvmti, JNIEnv *jni,
@@ -28,41 +24,39 @@ extern "C" JNICALL void class_file_load_hook(jvmtiEnv *jvmti, JNIEnv *jni,
     jobject protection_domain, jint data_len, const unsigned char *data,
     jint *new_data_len, unsigned char **new_data) {
 
+  // Use the codestretcher + optional conversion
   CodeStretcher stretcher(jvmti, name, data_len, (unsigned char*) data);
-  stretcher.rewrite_class_native(EnableProfiler);
-  std::string unique_key = stretcher.get_unique_key();
 
-  stretcher.dump_to_file("stage-1-dump/" + unique_key);
+  bool loaded_from_cache = false;
 
-  // std::cout << "Native rewriting " << unique_key << " with loader " << loader << '\n';
+  // Try the cache first
+  if (EnableProfiler || !(loaded_from_cache = stretcher.load_from_cache())) {
+    stretcher.rewrite_class_native(EnableProfiler);
+    std::string unique_key = stretcher.get_unique_key();
 
-  // std::string target("testbench.Main!8890990170487007973");
+    stretcher.dump_to_file("stage-1-dump/" + unique_key);
 
-  //if (unique_key.rfind("testbench.Main!", 0) == 0 ) {
-  //if (boot_classlist.find(unique_key) == boot_classlist.end() && !(name == NULL && loader == NULL)) {
-  bool has_loader = loader != NULL;
-  bool is_lambda = name == NULL;
-  bool is_internal = !is_lambda && (std::string(name).rfind("jdk/internal", 0) == 0);
-  bool is_bootlisted = boot_classlist.find(unique_key) != boot_classlist.end();
+    bool has_loader = loader != NULL;
+    bool is_lambda = name == NULL;
+    bool is_internal = !is_lambda && (std::string(name).rfind("jdk/internal", 0) == 0);
+    bool is_bootlisted = boot_classlist.find(unique_key) != boot_classlist.end();
 
-  if (UseSuperinstructions && has_loader && !is_internal && !is_bootlisted) {
-    // Not on the boot list and not a core classes lambda --> rewrite in java
- //   std::cout << "  JNI rewriting " << unique_key << '\n';
-    stretcher.rewrite_class_java(jni);
-    if (jni->ExceptionCheck() == JNI_TRUE)
-      return;
+    if (UseSuperinstructions && has_loader && !is_internal && !is_bootlisted) {
+      // Not on the boot list and not a core classes lambda --> rewrite in java
+      stretcher.rewrite_class_java(jni);
+      if (jni->ExceptionCheck() == JNI_TRUE)
+        return;
+    }
+    stretcher.dump_to_file("stage-3-dump/" + unique_key);
+    //std::cout << "Loaded " << stretcher.get_unique_key() << " just in time\n";
+  }
+
+  if (loaded_from_cache) {
+    // Load from cache was successful
+    //std::cout << "Loaded " << stretcher.get_unique_key() << " from cache\n";
   }
 
   stretcher.get_state(new_data, new_data_len);
-
-
-//  if (name != NULL && strcmp("java/util/concurrent/ConcurrentHashMap", name) == 0) {
-//      // To file
-//      printf("Exporting class %s to Output.class\n", name);
-//      stretcher.dump_to_file("Output.class");
-//  }
-
-  stretcher.dump_to_file("stage-3-dump/" + unique_key);
 }
 
 extern "C" JNICALL void vm_death_hook(jvmtiEnv *jvmti, JNIEnv *jni) {

@@ -441,6 +441,24 @@ public abstract class MethodVisitor {
 	 *               the index of a local variable.
 	 */
 	public void visitVarInsn(final int opcode, final int var) {
+		if ((var & 0xff) != var)
+			throw new AssertionError("Use wide");
+		if (mv != null) {
+			mv.visitVarInsn(opcode, var);
+		}
+	}
+	
+	/**
+	 * Visits a local variable instruction. A local variable instruction is an
+	 * instruction that loads or stores the value of a local variable.
+	 *
+	 * @param opcode the opcode of the local variable instruction to be visited.
+	 *               This opcode is either ILOAD, LLOAD, FLOAD, DLOAD, ALOAD,
+	 *               ISTORE, LSTORE, FSTORE, DSTORE, ASTORE or RET.
+	 * @param var    the operand of the instruction to be visited. This operand is
+	 *               the index of a local variable.
+	 */
+	public void visitWideVarInsn(final int opcode, final int var) {
 		if (mv != null) {
 			mv.visitVarInsn(opcode, var);
 		}
@@ -832,8 +850,22 @@ public abstract class MethodVisitor {
 	 * @param increment amount to increment the local variable by.
 	 */
 	public void visitIincInsn(final int var, final int increment) {
+		if ((var & 0xff) != var)
+			throw new AssertionError("Use wide");
 		if (mv != null) {
 			mv.visitIincInsn(var, increment);
+		}
+	}
+	
+	/**
+	 * Visits a wide IINC instruction.
+	 *
+	 * @param var       index of the local variable to be incremented.
+	 * @param increment amount to increment the local variable by.
+	 */
+	public void visitWideIincInsn(final int var, final int increment) {
+		if (mv != null) {
+			mv.visitWideIincInsn(var, increment);
 		}
 	}
 	

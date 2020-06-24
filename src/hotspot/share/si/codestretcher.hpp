@@ -36,6 +36,12 @@ public:
   void get_state(unsigned char **new_data, jint *new_data_len);
 
   /**
+   * Load the SI version from cache if possible. Returns false if a class with this key
+   * does not exist in the cache.
+   */
+  bool load_from_cache();
+
+  /**
    * Writes the class to the filename.
    */
   void dump_to_file(std::string filename);

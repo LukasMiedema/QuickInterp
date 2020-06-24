@@ -41,8 +41,7 @@ public class InstructionSetDefinition {
 	
 	public Map<BytecodePrimitive, InstructionDefinition> addProfiling() {
 		return Arrays.stream(BytecodePrimitive.values())
-				.filter(p -> p.hasFlag(BytecodeFlag.JUMP))
-				.filter(p -> p != BytecodePrimitive.lookupswitch && p != BytecodePrimitive.tableswitch)
+				.filter(p -> p.hasFlag(BytecodeFlag.JUMP_PROFILE))
 				.collect(Collectors.toMap(Function.identity(), p -> this.addProfilingInstruction("profile_" + p.name(), p)));
 	}
 

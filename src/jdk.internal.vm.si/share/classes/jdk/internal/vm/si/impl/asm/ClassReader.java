@@ -2330,10 +2330,10 @@ public class ClassReader {
 			case Constants.WIDE:
 				opcode = (classBuffer[currentOffset + 2] & 0xFF) << 8 | (classBuffer[currentOffset + 3] & 0xFF);
 				if (opcode == Opcodes.IINC) {
-					methodVisitor.visitIincInsn(readUnsignedShort(currentOffset + 4), readShort(currentOffset + 6));
+					methodVisitor.visitWideIincInsn(readUnsignedShort(currentOffset + 4), readShort(currentOffset + 6));
 					currentOffset += 8;
 				} else {
-					methodVisitor.visitVarInsn(opcode, readUnsignedShort(currentOffset + 4));
+					methodVisitor.visitWideVarInsn(opcode, readUnsignedShort(currentOffset + 4));
 					currentOffset += 6;
 				}
 				break;

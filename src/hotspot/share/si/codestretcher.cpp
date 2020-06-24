@@ -3,6 +3,7 @@
 #include <iostream>
 #include <fstream>
 #include <algorithm>
+#include "runtime/os.inline.hpp"
 
 using std::cerr;
 using std::cout;
@@ -205,8 +206,10 @@ void CodeStretcher::get_state(unsigned char **new_data, jint *new_data_len) {
 void CodeStretcher::dump_to_file(std::string filename) {
   std::ofstream fout;
   fout.open(filename, std::ios::binary | std::ios::out);
-  fout.write((char*) this->data, this->data_len);
-  fout.close();
+  if (fout.good()) {
+    fout.write((char*) this->data, this->data_len);
+    fout.close();
+  }
 }
 
 std::string CodeStretcher::get_unique_key() {
@@ -238,4 +241,24 @@ std::string CodeStretcher::compute_unique_key(void) {
   str += "!";
   str += std::to_string(this->compute_hash());
   return str;
+}
+
+bool CodeStretcher::load_from_cache(void) {
+  std::string cache_key = "class-cache/" + this->unique_key;
+  // check if file exists
+  struct stat st;
+  if (os::stat(cache_key.c_str(), &st) == 0) {
+    // found file, open it
+    int file_handle = os::open(cache_key.c_str(), 0, 0);
+    if (file_handle != -1) {
+      // read contents into resource array
+      this->data_len = st.st_size;
+      this->env->Allocate(this->data_len, &this->data);
+      size_t num_read = os::read(file_handle, (char*) this->data, st.st_size);
+      // close file
+      os::close(file_handle);
+      return true;
+    }
+  }
+  return false;
 }

@@ -30,6 +30,10 @@ public class ImprovedSuperinstructionTree {
 	}
 
 	public static ImprovedSuperinstructionTree build(List<InstructionDefinition> instructions) {
+//		System.out.println("=== Loaded superinstructions (" + instructions.size() + ") ===");
+//		instructions.stream().filter(InstructionDefinition::isSuperinstruction).forEach(System.out::println);
+//		System.out.println();
+		
 		// Add all instructions into the tree, mutating / populating where needed
 		Map<Integer, Node> root = new HashMap<>();
 		for (var instr : instructions) {

@@ -63,14 +63,14 @@ public enum BytecodePrimitive {
 	aload_1			(0x2b,	 2,	 1,	""),
 	aload_2			(0x2c,	 2,	 1,	""),
 	aload_3			(0x2d,	 2,	 1,	""),
-	iaload			(0x2e,	 2,	-1,	""),
-	laload			(0x2f,	 2,	 0,	""),
-	faload			(0x30,	 2,	-1,	""),
-	daload			(0x31,	 2,	 0,	""),
-	aaload			(0x32,	 2,	-1,	""),
-	baload			(0x33,	 2,	-1,	""),
-	caload			(0x34,	 2,	-1,	""),
-	saload			(0x35,	 2,	-1,	""),
+	iaload			(0x2e,	 2,	-1,	"",		JUMP),
+	laload			(0x2f,	 2,	 0,	"",		JUMP),
+	faload			(0x30,	 2,	-1,	"",		JUMP),
+	daload			(0x31,	 2,	 0,	"",		JUMP),
+	aaload			(0x32,	 2,	-1,	"",		JUMP),
+	baload			(0x33,	 2,	-1,	"",		JUMP),
+	caload			(0x34,	 2,	-1,	"",		JUMP),
+	saload			(0x35,	 2,	-1,	"",		JUMP),
 	istore			(0x36,	 3,	-1,	"i"),
 	lstore			(0x37,	 3,	-2,	"i"),
 	fstore			(0x38,	 3,	-1, "i"),
@@ -96,14 +96,14 @@ public enum BytecodePrimitive {
 	astore_1		(0x4c,	 2,	-1,	""),
 	astore_2		(0x4d,	 2,	-1,	""),
 	astore_3		(0x4e,	 2,	-1,	""),
-	iastore			(0x4f,	 2, -3,	""),
-	lastore			(0x50,	 2,	-4,	""),
-	fastore			(0x51,	 2,	-3,	""),
-	dastore			(0x52,	 2,	-4,	""),
-	aastore			(0x53,	 2,	-3,	""),
-	bastore			(0x54,	 2,	-3,	""),
-	castore			(0x55,	 2,	-3,	""),
-	sastore			(0x56,	 2,	-3,	""),
+	iastore			(0x4f,	 2, -3,	"",		JUMP),
+	lastore			(0x50,	 2,	-4,	"",		JUMP),
+	fastore			(0x51,	 2,	-3,	"",		JUMP),
+	dastore			(0x52,	 2,	-4,	"",		JUMP),
+	aastore			(0x53,	 2,	-3,	"",		JUMP),
+	bastore			(0x54,	 2,	-3,	"",		JUMP),
+	castore			(0x55,	 2,	-3,	"",		JUMP),
+	sastore			(0x56,	 2,	-3,	"",		JUMP),
 	pop				(0x57,	 2,	-1,	""),
 	pop2			(0x58,	 2,	-2,	""),
 	dup				(0x59,	 2,	 1,	""),
@@ -127,12 +127,12 @@ public enum BytecodePrimitive {
 	dmul			(0x6b,	 2,	-2,	""),
 	idiv			(0x6c,	 2,	-1,	""),
 	ldiv			(0x6d,	 2,	-2,	""),
-	fdiv			(0x6e,	 2,	-1,	""),
-	ddiv			(0x6f,	 2,	-2,	""),
-	irem			(0x70,	 2,	-1,	""),
-	lrem			(0x71,	 2,	-2,	""),
-	frem			(0x72,	 2,	-1,	""),
-	drem			(0x73,	 2,	-2,	""),
+	fdiv			(0x6e,	 2,	-1,	"",		JUMP),
+	ddiv			(0x6f,	 2,	-2,	"",		JUMP),
+	irem			(0x70,	 2,	-1,	"",		JUMP),
+	lrem			(0x71,	 2,	-2,	"",		JUMP),
+	frem			(0x72,	 2,	-1,	"",		JUMP),
+	drem			(0x73,	 2,	-2,	"",		JUMP),
 	ineg			(0x74,	 2,	 0,	""),
 	lneg			(0x75,	 2,	 0,	""),
 	fneg			(0x76,	 2,	 0,	""),
@@ -170,31 +170,31 @@ public enum BytecodePrimitive {
 	fcmpg			(0x96,	 2, -1,	""),
 	dcmpl			(0x97,	 2,	-3,	""),
 	dcmpg			(0x98,	 2,	-3,	""),
-	ifeq			(0x99,	 4,	-1, "oo",	JUMP),
-	ifne			(0x9a,	 4,	-1,	"oo",	JUMP),
-	iflt			(0x9b,	 4,	-1, "oo",	JUMP),
-	ifge			(0x9c,	 4,	-1, "oo",	JUMP),
-	ifgt			(0x9d,	 4,	-1, "oo",	JUMP),
-	ifle			(0x9e,	 4,	-1, "oo",	JUMP),
-	if_icmpeq		(0x9f,	 4,	-2, "oo",	JUMP),
-	if_icmpne		(0xa0,	 4,	-2, "oo",	JUMP),
-	if_icmplt		(0xa1,	 4,	-2, "oo",	JUMP),
-	if_icmpge		(0xa2,	 4,	-2, "oo",	JUMP),
-	if_icmpgt		(0xa3,	 4,	-2, "oo",	JUMP),
-	if_icmple		(0xa4,	 4,	-2, "oo",	JUMP),
-	if_acmpeq		(0xa5,	 4,	-2, "oo",	JUMP),
-	if_acmpne		(0xa6,	 4,	-2, "oo",	JUMP),
-	_goto			(0xa7,	 4,	 0, "oo",	TERMINAL, JUMP),
-	jsr				(0xa8,	 4,	 0, "oo",	TERMINAL, JUMP),
-	ret				(0xa9,	 4,	 0, "i",	TERMINAL, JUMP),
+	ifeq			(0x99,	 4,	-1, "oo",	JUMP, JUMP_PROFILE),
+	ifne			(0x9a,	 4,	-1,	"oo",	JUMP, JUMP_PROFILE),
+	iflt			(0x9b,	 4,	-1, "oo",	JUMP, JUMP_PROFILE),
+	ifge			(0x9c,	 4,	-1, "oo",	JUMP, JUMP_PROFILE),
+	ifgt			(0x9d,	 4,	-1, "oo",	JUMP, JUMP_PROFILE),
+	ifle			(0x9e,	 4,	-1, "oo",	JUMP, JUMP_PROFILE),
+	if_icmpeq		(0x9f,	 4,	-2, "oo",	JUMP, JUMP_PROFILE),
+	if_icmpne		(0xa0,	 4,	-2, "oo",	JUMP, JUMP_PROFILE),
+	if_icmplt		(0xa1,	 4,	-2, "oo",	JUMP, JUMP_PROFILE),
+	if_icmpge		(0xa2,	 4,	-2, "oo",	JUMP, JUMP_PROFILE),
+	if_icmpgt		(0xa3,	 4,	-2, "oo",	JUMP, JUMP_PROFILE),
+	if_icmple		(0xa4,	 4,	-2, "oo",	JUMP, JUMP_PROFILE),
+	if_acmpeq		(0xa5,	 4,	-2, "oo",	JUMP, JUMP_PROFILE),
+	if_acmpne		(0xa6,	 4,	-2, "oo",	JUMP, JUMP_PROFILE),
+	_goto			(0xa7,	 4,	 0, "oo",	TERMINAL, JUMP, JUMP_PROFILE),
+	jsr				(0xa8,	 4,	 1, "oo",	TERMINAL, JUMP, NO_SUPERINSTRUCTION, JUMP_PROFILE),
+	ret				(0xa9,	 4,	 0, "i",	TERMINAL, JUMP, NO_SUPERINSTRUCTION, JUMP_PROFILE),
 	tableswitch		(0xaa,			null,	TERMINAL, JUMP),
 	lookupswitch	(0xab,			null,	TERMINAL, JUMP),
-	ireturn			(0xac,			"",	TERMINAL),
-	lreturn			(0xad,			"",	TERMINAL),
-	freturn			(0xae,			"",	TERMINAL),
-	dreturn			(0xaf,			"",	TERMINAL),
-	areturn			(0xb0,			"",	TERMINAL),
-	_return			(0xb1,			"",	TERMINAL),
+	ireturn			(0xac,			"",		TERMINAL),
+	lreturn			(0xad,			"",		TERMINAL),
+	freturn			(0xae,			"",		TERMINAL),
+	dreturn			(0xaf,			"",		TERMINAL),
+	areturn			(0xb0,			"",		TERMINAL),
+	_return			(0xb1,			"",		TERMINAL),
 	getstatic		(0xb2,	4,	 U,	"JJ",	UPDATES_STACK_OFFSET, NO_SUPERINSTRUCTION),
 	putstatic		(0xb3,	4,	 U,	"JJ",	UPDATES_STACK_OFFSET, NO_SUPERINSTRUCTION),
 	getfield		(0xb4,	4,	 U,	"JJ",	UPDATES_STACK_OFFSET, NO_SUPERINSTRUCTION),
@@ -204,30 +204,31 @@ public enum BytecodePrimitive {
 	invokestatic	(0xb8,			"JJ",	TERMINAL, NO_SUPERINSTRUCTION),
 	invokeinterface	(0xb9,			"JJ__",	TERMINAL, NO_SUPERINSTRUCTION),
 	invokedynamic	(0xba,			"JJJJ",	TERMINAL, NO_SUPERINSTRUCTION),
-	_new			(0xbb,	 4,	 1,	"kk"),
-	newarray		(0xbc,	 3,	 0,	"c"),
-	anewarray		(0xbd,	 4,	 0,	"kk"),
-	arraylength		(0xbe,	 2,	 0,	""),
-	athrow			(0xbf,			"",	TERMINAL),
+	_new			(0xbb,	 4,	 1,	"kk",	JUMP),
+	newarray		(0xbc,	 3,	 0,	"c",	JUMP),
+	anewarray		(0xbd,	 4,	 0,	"kk",	JUMP),
+	arraylength		(0xbe,	 2,	 0,	"",		JUMP),
+	athrow			(0xbf,			"",		TERMINAL, JUMP),
 	checkcast		(0xc0,	 4,	 0,	"kk",	NO_SUPERINSTRUCTION),
 	_instanceof		(0xc1,	 4,  0,	"kk",	NO_SUPERINSTRUCTION),
-	monitorenter	(0xc2,			"",	TERMINAL, NO_SUPERINSTRUCTION),
-	monitorexit		(0xc3,	 2, -1,	"",	NO_SUPERINSTRUCTION),
+	monitorenter	(0xc2,			"",		TERMINAL, NO_SUPERINSTRUCTION),
+	monitorexit		(0xc3,	 2, -1,	"",		NO_SUPERINSTRUCTION),
 	wide			(0xc4,			null,	UPDATES_STACK_OFFSET, UPDATES_PC_OFFSET),
 	multianewarray	(0xc5,	 5,  U,	"kkc",	NO_SUPERINSTRUCTION, UPDATES_STACK_OFFSET),
-	ifnull			(0xc6,	 4,	-1,	"oo",	JUMP),
-	ifnonnull		(0xc7,	 4,	-1,	"oo",	JUMP),
-	goto_w			(0xc8,			"oooo",	TERMINAL, JUMP),
-	jsr_w			(0xc9,			"oooo",	TERMINAL, JUMP),
+	ifnull			(0xc6,	 4,	-1,	"oo",	JUMP, JUMP_PROFILE),
+	ifnonnull		(0xc7,	 4,	-1,	"oo",	JUMP, JUMP_PROFILE),
+	goto_w			(0xc8,			"oooo",	TERMINAL, JUMP, JUMP_PROFILE),
+	jsr_w			(0xc9,			"oooo",	TERMINAL, JUMP, JUMP_PROFILE),
 	breakpoint		(0xca,			null,	TERMINAL, NO_SUPERINSTRUCTION),
 	fast_aldc		(230,	 3,  1,	"j"),
 	fast_aldc_w		(231,	 4,  1,	"JJ"),
 	return_register_finalizer
-					(232, 			"",	TERMINAL, NO_SUPERINSTRUCTION),
+					(232, 			"",		TERMINAL, NO_SUPERINSTRUCTION),
 	invokehandle	(233,			"JJ",	TERMINAL, NO_SUPERINSTRUCTION),
 	
 	profile			(238,	 6,  0, "IIII", NO_SUPERINSTRUCTION),
-	end_sequence	(-1,	 0,	 0,	null,	TERMINAL);
+	end_sequence	(-1,	 0,	 0,	null,	TERMINAL),
+	jump_target		(-1,	 0,  0, null);
 	
 	private static BytecodePrimitive[] OPCODE_MAP = new BytecodePrimitive[238 + 1];
 	static {
@@ -238,6 +239,8 @@ public enum BytecodePrimitive {
 	}
 	
 	public static BytecodePrimitive byOpcode(int opcode) {
+		if (opcode == -1)
+			return null;
 		return OPCODE_MAP[opcode];
 	}
 	
@@ -341,6 +344,10 @@ public enum BytecodePrimitive {
 		}
 		return format;
 	}
+	
+	public EnumSet<BytecodeFlag> getFlags() {
+		return flags;
+	}
 
 	public enum BytecodeFlag {
 		/**
@@ -369,10 +376,15 @@ public enum BytecodePrimitive {
 		TERMINAL,
 		
 		/**
-		 * This instruction may perform a jump. Use together with {@link #TERMINAL} to signal
-		 * an unconditional jump.
+		 * This instruction may perform a jump (e.g. to an exception handler). Use together with {@link #TERMINAL} to signal
+		 * an unconditional jump. Also instructions which may throw VM exceptions must have this flag.
 		 */
 		JUMP,
+		
+		/**
+		 * This instruction can be profiled with a "jump counter" variant.
+		 */
+		JUMP_PROFILE,
 		
 		/**
 		 * This bytecode primitive modifies the "pc" variable by writing its own size +

@@ -155,7 +155,7 @@ public class ByteVector {
 		length = currentLength;
 		return this;
 	}
-
+	
 	final ByteVector put12_(final int byteValue, final int shortValue) {
 		return this.put12(byteValue, shortValue);
 	}

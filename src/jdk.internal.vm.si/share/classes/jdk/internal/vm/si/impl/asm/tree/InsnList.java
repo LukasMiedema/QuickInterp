@@ -112,7 +112,7 @@ public class InsnList implements Iterable<AbstractInsnNode> {
 	public boolean contains(final AbstractInsnNode insnNode) {
 		AbstractInsnNode currentInsn = firstInsn;
 		while (currentInsn != null && currentInsn != insnNode) {
-			currentInsn = currentInsn.nextInsn;
+			currentInsn = currentInsn.getNext();
 		}
 		return currentInsn != null;
 	}
@@ -145,7 +145,7 @@ public class InsnList implements Iterable<AbstractInsnNode> {
 		AbstractInsnNode currentInsn = firstInsn;
 		while (currentInsn != null) {
 			currentInsn.accept(methodVisitor);
-			currentInsn = currentInsn.nextInsn;
+			currentInsn = currentInsn.getNext();
 		}
 	}
 
@@ -196,9 +196,13 @@ public class InsnList implements Iterable<AbstractInsnNode> {
 		while (currentInsn != null) {
 			insnNodeArray[currentInsnIndex] = currentInsn;
 			currentInsn.index = currentInsnIndex++;
-			currentInsn = currentInsn.nextInsn;
+			currentInsn = currentInsn.getNext();
 		}
 		return insnNodeArray;
+	}
+
+	public void setFirst(AbstractInsnNode node) {
+		this.firstInsn = node;
 	}
 
 	/**
@@ -209,17 +213,17 @@ public class InsnList implements Iterable<AbstractInsnNode> {
 	 *                    {@link InsnList}</i>.
 	 */
 	public void set(final AbstractInsnNode oldInsnNode, final AbstractInsnNode newInsnNode) {
-		AbstractInsnNode nextInsn = oldInsnNode.nextInsn;
-		newInsnNode.nextInsn = nextInsn;
+		AbstractInsnNode nextInsn = oldInsnNode.getNext();
+		newInsnNode.setNext(nextInsn);
 		if (nextInsn != null) {
-			nextInsn.previousInsn = newInsnNode;
+			nextInsn.setPrevious(newInsnNode);
 		} else {
 			lastInsn = newInsnNode;
 		}
-		AbstractInsnNode previousInsn = oldInsnNode.previousInsn;
-		newInsnNode.previousInsn = previousInsn;
+		AbstractInsnNode previousInsn = oldInsnNode.getPrevious();
+		newInsnNode.setPrevious(previousInsn);
 		if (previousInsn != null) {
-			previousInsn.nextInsn = newInsnNode;
+			previousInsn.setNext(newInsnNode);
 		} else {
 			firstInsn = newInsnNode;
 		}
@@ -231,8 +235,8 @@ public class InsnList implements Iterable<AbstractInsnNode> {
 			newInsnNode.index = 0; // newInsnNode now belongs to an InsnList.
 		}
 		oldInsnNode.index = -1; // oldInsnNode no longer belongs to an InsnList.
-		oldInsnNode.previousInsn = null;
-		oldInsnNode.nextInsn = null;
+		oldInsnNode.setPrevious(null);
+		oldInsnNode.setNext(null);
 	}
 
 	/**
@@ -247,8 +251,8 @@ public class InsnList implements Iterable<AbstractInsnNode> {
 			firstInsn = insnNode;
 			lastInsn = insnNode;
 		} else {
-			lastInsn.nextInsn = insnNode;
-			insnNode.previousInsn = lastInsn;
+			lastInsn.setNext(insnNode);
+			insnNode.setPrevious(lastInsn);
 		}
 		lastInsn = insnNode;
 		cache = null;
@@ -271,8 +275,8 @@ public class InsnList implements Iterable<AbstractInsnNode> {
 			lastInsn = insnList.lastInsn;
 		} else {
 			AbstractInsnNode firstInsnListElement = insnList.firstInsn;
-			lastInsn.nextInsn = firstInsnListElement;
-			firstInsnListElement.previousInsn = lastInsn;
+			lastInsn.setNext(firstInsnListElement);
+			firstInsnListElement.setPrevious(lastInsn);
 			lastInsn = insnList.lastInsn;
 		}
 		cache = null;
@@ -291,8 +295,8 @@ public class InsnList implements Iterable<AbstractInsnNode> {
 			firstInsn = insnNode;
 			lastInsn = insnNode;
 		} else {
-			firstInsn.previousInsn = insnNode;
-			insnNode.nextInsn = firstInsn;
+			firstInsn.setPrevious(insnNode);
+			insnNode.setNext(firstInsn);
 		}
 		firstInsn = insnNode;
 		cache = null;
@@ -315,8 +319,8 @@ public class InsnList implements Iterable<AbstractInsnNode> {
 			lastInsn = insnList.lastInsn;
 		} else {
 			AbstractInsnNode lastInsnListElement = insnList.lastInsn;
-			firstInsn.previousInsn = lastInsnListElement;
-			lastInsnListElement.nextInsn = firstInsn;
+			firstInsn.setPrevious(lastInsnListElement);
+			lastInsnListElement.setNext(firstInsn);
 			firstInsn = insnList.firstInsn;
 		}
 		cache = null;
@@ -333,15 +337,15 @@ public class InsnList implements Iterable<AbstractInsnNode> {
 	 */
 	public void insert(final AbstractInsnNode previousInsn, final AbstractInsnNode insnNode) {
 		++size;
-		AbstractInsnNode nextInsn = previousInsn.nextInsn;
+		AbstractInsnNode nextInsn = previousInsn.getNext();
 		if (nextInsn == null) {
 			lastInsn = insnNode;
 		} else {
-			nextInsn.previousInsn = insnNode;
+			nextInsn.setPrevious(insnNode);
 		}
-		previousInsn.nextInsn = insnNode;
-		insnNode.nextInsn = nextInsn;
-		insnNode.previousInsn = previousInsn;
+		previousInsn.setNext(insnNode);
+		insnNode.setNext(nextInsn);
+		insnNode.setPrevious(previousInsn);
 		cache = null;
 		insnNode.index = 0; // insnNode now belongs to an InsnList.
 	}
@@ -362,15 +366,15 @@ public class InsnList implements Iterable<AbstractInsnNode> {
 		size += insnList.size;
 		AbstractInsnNode firstInsnListElement = insnList.firstInsn;
 		AbstractInsnNode lastInsnListElement = insnList.lastInsn;
-		AbstractInsnNode nextInsn = previousInsn.nextInsn;
+		AbstractInsnNode nextInsn = previousInsn.getNext();
 		if (nextInsn == null) {
 			lastInsn = lastInsnListElement;
 		} else {
-			nextInsn.previousInsn = lastInsnListElement;
+			nextInsn.setPrevious(lastInsnListElement);
 		}
-		previousInsn.nextInsn = firstInsnListElement;
-		lastInsnListElement.nextInsn = nextInsn;
-		firstInsnListElement.previousInsn = previousInsn;
+		previousInsn.setNext(firstInsnListElement);
+		lastInsnListElement.setNext(nextInsn);
+		firstInsnListElement.setPrevious(previousInsn);
 		cache = null;
 		insnList.removeAll(false);
 	}
@@ -385,15 +389,15 @@ public class InsnList implements Iterable<AbstractInsnNode> {
 	 */
 	public void insertBefore(final AbstractInsnNode nextInsn, final AbstractInsnNode insnNode) {
 		++size;
-		AbstractInsnNode previousInsn = nextInsn.previousInsn;
+		AbstractInsnNode previousInsn = nextInsn.getPrevious();
 		if (previousInsn == null) {
 			firstInsn = insnNode;
 		} else {
-			previousInsn.nextInsn = insnNode;
+			previousInsn.setNext(insnNode);
 		}
-		nextInsn.previousInsn = insnNode;
-		insnNode.nextInsn = nextInsn;
-		insnNode.previousInsn = previousInsn;
+		nextInsn.setPrevious(insnNode);
+		insnNode.setNext(nextInsn);
+		insnNode.setPrevious(previousInsn);
 		cache = null;
 		insnNode.index = 0; // insnNode now belongs to an InsnList.
 	}
@@ -413,15 +417,15 @@ public class InsnList implements Iterable<AbstractInsnNode> {
 		size += insnList.size;
 		AbstractInsnNode firstInsnListElement = insnList.firstInsn;
 		AbstractInsnNode lastInsnListElement = insnList.lastInsn;
-		AbstractInsnNode previousInsn = nextInsn.previousInsn;
+		AbstractInsnNode previousInsn = nextInsn.getPrevious();
 		if (previousInsn == null) {
 			firstInsn = firstInsnListElement;
 		} else {
-			previousInsn.nextInsn = firstInsnListElement;
+			previousInsn.setNext(firstInsnListElement);
 		}
-		nextInsn.previousInsn = lastInsnListElement;
-		lastInsnListElement.nextInsn = nextInsn;
-		firstInsnListElement.previousInsn = previousInsn;
+		nextInsn.setPrevious(lastInsnListElement);
+		lastInsnListElement.setNext(nextInsn);
+		firstInsnListElement.setPrevious(previousInsn);
 		cache = null;
 		insnList.removeAll(false);
 	}
@@ -433,29 +437,29 @@ public class InsnList implements Iterable<AbstractInsnNode> {
 	 */
 	public void remove(final AbstractInsnNode insnNode) {
 		--size;
-		AbstractInsnNode nextInsn = insnNode.nextInsn;
-		AbstractInsnNode previousInsn = insnNode.previousInsn;
+		AbstractInsnNode nextInsn = insnNode.getNext();
+		AbstractInsnNode previousInsn = insnNode.getPrevious();
 		if (nextInsn == null) {
 			if (previousInsn == null) {
 				firstInsn = null;
 				lastInsn = null;
 			} else {
-				previousInsn.nextInsn = null;
+				previousInsn.setNext(null);
 				lastInsn = previousInsn;
 			}
 		} else {
 			if (previousInsn == null) {
 				firstInsn = nextInsn;
-				nextInsn.previousInsn = null;
+				nextInsn.setPrevious(null);
 			} else {
-				previousInsn.nextInsn = nextInsn;
-				nextInsn.previousInsn = previousInsn;
+				previousInsn.setNext(nextInsn);
+				nextInsn.setPrevious(previousInsn);
 			}
 		}
 		cache = null;
 		insnNode.index = -1; // insnNode no longer belongs to an InsnList.
-		insnNode.previousInsn = null;
-		insnNode.nextInsn = null;
+		insnNode.setPrevious(null);
+		insnNode.setNext(null);
 	}
 
 	/**
@@ -468,10 +472,10 @@ public class InsnList implements Iterable<AbstractInsnNode> {
 		if (mark) {
 			AbstractInsnNode currentInsn = firstInsn;
 			while (currentInsn != null) {
-				AbstractInsnNode next = currentInsn.nextInsn;
+				AbstractInsnNode next = currentInsn.getNext();
 				currentInsn.index = -1; // currentInsn no longer belongs to an InsnList.
-				currentInsn.previousInsn = null;
-				currentInsn.nextInsn = null;
+				currentInsn.setPrevious(null);
+				currentInsn.setNext(null);
 				currentInsn = next;
 			}
 		}
@@ -496,7 +500,7 @@ public class InsnList implements Iterable<AbstractInsnNode> {
 			if (currentInsn instanceof LabelNode) {
 				((LabelNode) currentInsn).resetLabel();
 			}
-			currentInsn = currentInsn.nextInsn;
+			currentInsn = currentInsn.getNext();
 		}
 	}
 
@@ -516,13 +520,13 @@ public class InsnList implements Iterable<AbstractInsnNode> {
 				previousInsn = getLast();
 			} else {
 				nextInsn = get(index);
-				previousInsn = nextInsn.previousInsn;
+				previousInsn = nextInsn.getPrevious();
 			}
 		}
 
 		InsnListIterator(AbstractInsnNode start) {
 			nextInsn = start;
-			previousInsn = start.previousInsn;
+			previousInsn = start.getPrevious();
 		}
 
 		@Override
@@ -537,7 +541,7 @@ public class InsnList implements Iterable<AbstractInsnNode> {
 			}
 			AbstractInsnNode result = nextInsn;
 			previousInsn = result;
-			nextInsn = result.nextInsn;
+			nextInsn = result.getNext();
 			remove = result;
 			return result;
 		}
@@ -546,9 +550,9 @@ public class InsnList implements Iterable<AbstractInsnNode> {
 		public void remove() {
 			if (remove != null) {
 				if (remove == nextInsn) {
-					nextInsn = nextInsn.nextInsn;
+					nextInsn = nextInsn.getNext();
 				} else {
-					previousInsn = previousInsn.previousInsn;
+					previousInsn = previousInsn.getPrevious();
 				}
 				InsnList.this.remove(remove);
 				remove = null;
@@ -569,7 +573,7 @@ public class InsnList implements Iterable<AbstractInsnNode> {
 			}
 			AbstractInsnNode result = previousInsn;
 			nextInsn = result;
-			previousInsn = result.previousInsn;
+			previousInsn = result.getPrevious();
 			remove = result;
 			return result;
 		}

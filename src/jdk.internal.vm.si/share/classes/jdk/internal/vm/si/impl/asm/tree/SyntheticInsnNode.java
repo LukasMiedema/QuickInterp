@@ -13,14 +13,18 @@ import jdk.internal.vm.si.impl.bytecode.BytecodePrimitive;
  * @author lukas
  *
  */
-public class SyntheticInsnNode extends AbstractInsnNode {
+public class SyntheticInsnNode extends AbstractInsnNode implements ProfileableInsnNode {
 
-	public SyntheticInsnNode(BytecodePrimitive primitive) {
+	private final long weight;
+
+	public SyntheticInsnNode(BytecodePrimitive primitive, long weight) {
 		super(primitive.getInstr());
+		this.weight = weight;
 	}
 	
-	public SyntheticInsnNode(int opcode) {
+	public SyntheticInsnNode(int opcode, long weight) {
 		super(opcode);
+		this.weight = weight;
 	}
 
 	@Override
@@ -35,7 +39,15 @@ public class SyntheticInsnNode extends AbstractInsnNode {
 
 	@Override
 	public AbstractInsnNode clone(Map<LabelNode, LabelNode> clonedLabels) {
-		return new SyntheticInsnNode(opcode).cloneAnnotations(this);
+		return new SyntheticInsnNode(opcode, weight).cloneAnnotations(this);
 	}
 
+	public long getWeight() {
+		return weight;
+	}
+
+	@Override
+	public boolean hasProfileData() {
+		return true;
+	}
 }

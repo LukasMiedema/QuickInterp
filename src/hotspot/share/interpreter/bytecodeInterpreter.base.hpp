@@ -549,7 +549,7 @@
 
 // (+4/+8,-2) or jump
 #define INSTR_if_icmpeq(pc,offset)                    \
-  const bool cmp = (STACK_INT(-2) == STACK_INT(-1));\
+  const bool cmp = (STACK_INT(offset-2) == STACK_INT(offset-1));\
   /* Profile branch. */                               \
   BI_PROFILE_UPDATE_BRANCH(/*is_taken=*/cmp);         \
   if (cmp) {                                          \
@@ -562,7 +562,7 @@
   }
 // (+4/+8,-1) or jump
 #define INSTR_ifeq(pc,offset)                         \
-  const bool cmp = (STACK_INT(-1) == 0);\
+  const bool cmp = (STACK_INT(offset-1) == 0);\
   /* Profile branch. */                               \
   BI_PROFILE_UPDATE_BRANCH(/*is_taken=*/cmp);         \
   if (cmp) {                                          \
@@ -575,7 +575,7 @@
   }
 // (+4/+8,-2) or jump
 #define INSTR_if_icmpne(pc,offset)                    \
-  const bool cmp = (STACK_INT(-2) != STACK_INT(-1));\
+  const bool cmp = (STACK_INT(offset-2) != STACK_INT(offset-1));\
   /* Profile branch. */                               \
   BI_PROFILE_UPDATE_BRANCH(/*is_taken=*/cmp);         \
   if (cmp) {                                          \
@@ -588,7 +588,7 @@
   }
 // (+4/+8,-1) or jump
 #define INSTR_ifne(pc,offset)                         \
-  const bool cmp = (STACK_INT(-1) != 0);\
+  const bool cmp = (STACK_INT(offset-1) != 0);\
   /* Profile branch. */                               \
   BI_PROFILE_UPDATE_BRANCH(/*is_taken=*/cmp);         \
   if (cmp) {                                          \
@@ -601,7 +601,7 @@
   }
 // (+4/+8,-2) or jump
 #define INSTR_if_icmpgt(pc,offset)                    \
-  const bool cmp = (STACK_INT(-2) > STACK_INT(-1));\
+  const bool cmp = (STACK_INT(offset-2) > STACK_INT(offset-1));\
   /* Profile branch. */                               \
   BI_PROFILE_UPDATE_BRANCH(/*is_taken=*/cmp);         \
   if (cmp) {                                          \
@@ -614,7 +614,7 @@
   }
 // (+4/+8,-1) or jump
 #define INSTR_ifgt(pc,offset)                        \
-  const bool cmp = (STACK_INT(-1) > 0);\
+  const bool cmp = (STACK_INT(offset-1) > 0);\
   /* Profile branch. */                               \
   BI_PROFILE_UPDATE_BRANCH(/*is_taken=*/cmp);         \
   if (cmp) {                                          \
@@ -627,7 +627,7 @@
   }
 // (+4/+8,-2) or jump
 #define INSTR_if_icmplt(pc,offset)                    \
-  const bool cmp = (STACK_INT(-2) < STACK_INT(-1));\
+  const bool cmp = (STACK_INT(offset-2) < STACK_INT(offset-1));\
   /* Profile branch. */                               \
   BI_PROFILE_UPDATE_BRANCH(/*is_taken=*/cmp);         \
   if (cmp) {                                          \
@@ -640,7 +640,7 @@
   }
 // (+4/+8,-1) or jump
 #define INSTR_iflt(pc,offset)                        \
-  const bool cmp = (STACK_INT(-1) < 0);\
+  const bool cmp = (STACK_INT(offset-1) < 0);\
   /* Profile branch. */                               \
   BI_PROFILE_UPDATE_BRANCH(/*is_taken=*/cmp);         \
   if (cmp) {                                          \
@@ -653,7 +653,7 @@
   }
 // (+4/+8,-2) or jump
 #define INSTR_if_icmple(pc,offset)                    \
-  const bool cmp = (STACK_INT(-2) <= STACK_INT(-1));\
+  const bool cmp = (STACK_INT(offset-2) <= STACK_INT(offset-1));\
   /* Profile branch. */                               \
   BI_PROFILE_UPDATE_BRANCH(/*is_taken=*/cmp);         \
   if (cmp) {                                          \
@@ -666,7 +666,7 @@
   }
 // (+4/+8,-1) or jump
 #define INSTR_ifle(pc,offset)                        \
-  const bool cmp = (STACK_INT(-1) <= 0);\
+  const bool cmp = (STACK_INT(offset-1) <= 0);\
   /* Profile branch. */                               \
   BI_PROFILE_UPDATE_BRANCH(/*is_taken=*/cmp);         \
   if (cmp) {                                          \
@@ -679,7 +679,7 @@
   }
 // (+4/+8,-2) or jump
 #define INSTR_if_icmpge(pc,offset)                    \
-  const bool cmp = (STACK_INT(-2) >= STACK_INT(-1));\
+  const bool cmp = (STACK_INT(offset-2) >= STACK_INT(offset-1));\
   /* Profile branch. */                               \
   BI_PROFILE_UPDATE_BRANCH(/*is_taken=*/cmp);         \
   if (cmp) {                                          \
@@ -692,7 +692,7 @@
   }
 // (+4/+8,-1) or jump
 #define INSTR_ifge(pc,offset)                        \
-  const bool cmp = (STACK_INT(-1) >= 0);\
+  const bool cmp = (STACK_INT(offset-1) >= 0);\
   /* Profile branch. */                               \
   BI_PROFILE_UPDATE_BRANCH(/*is_taken=*/cmp);         \
   if (cmp) {                                          \
@@ -706,7 +706,7 @@
 
 // (+4/+8,-2) or jump
 #define INSTR_if_acmpeq(pc,offset)                    \
-  const bool cmp = (STACK_OBJECT(-2) == STACK_OBJECT(-1));\
+  const bool cmp = (STACK_OBJECT(offset-2) == STACK_OBJECT(offset-1));\
   /* Profile branch. */                               \
   BI_PROFILE_UPDATE_BRANCH(/*is_taken=*/cmp);         \
   if (cmp) {                                          \
@@ -719,7 +719,7 @@
   }
 // (+4/+8,-2) or jump
 #define INSTR_if_acmpne(pc,offset)                    \
-  const bool cmp = (STACK_OBJECT(-2) != STACK_OBJECT(-1));\
+  const bool cmp = (STACK_OBJECT(offset-2) != STACK_OBJECT(offset-1));\
   /* Profile branch. */                                \
   BI_PROFILE_UPDATE_BRANCH(/*is_taken=*/cmp);          \
   if (cmp) {                                           \
@@ -733,7 +733,7 @@
 
 // (+4/+8,-1) or jump
 #define INSTR_ifnull(pc,offset)                       \
-  const bool cmp = (STACK_OBJECT(-1) == NULL);        \
+  const bool cmp = (STACK_OBJECT(offset-1) == NULL);        \
   /* Profile branch. */                               \
   BI_PROFILE_UPDATE_BRANCH(/*is_taken=*/cmp);         \
   if (cmp) {                                          \
@@ -747,7 +747,7 @@
 
 // (+4/+8,-1) or jump
 #define INSTR_ifnonnull(pc,offset)                    \
-  const bool cmp = (!(STACK_OBJECT(-1) == NULL));     \
+  const bool cmp = (!(STACK_OBJECT(offset-1) == NULL));     \
   /* Profile branch. */                               \
   BI_PROFILE_UPDATE_BRANCH(/*is_taken=*/cmp);         \
   if (cmp) {                                          \
@@ -1335,7 +1335,7 @@
   CALL_VM(InterpreterRuntime::anewarray(THREAD, METHOD->constants(), index, size),\
           handle_exception);                          \
   OrderAccess::storestore();                          \
-  SET_STACK_OBJECT(THREAD->vm_result(), -1);          \
+  SET_STACK_OBJECT(THREAD->vm_result(), offset-1);    \
   THREAD->set_vm_result(NULL);
 
 // (+4,+?) updates-tos
@@ -1357,7 +1357,7 @@
 
 // (+4,0)
 #define INSTR_checkcast(pc,offset)                    \
-  if (STACK_OBJECT(-1) != NULL) {                     \
+  if (STACK_OBJECT(offset-1) != NULL) {               \
     VERIFY_OOP(STACK_OBJECT(offset-1));               \
     u2 index = Bytes::get_Java_u2((pc)+2);            \
     if (METHOD->constants()->tag_at(index).is_unresolved_klass()) {\

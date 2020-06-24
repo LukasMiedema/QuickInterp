@@ -1,6 +1,5 @@
 package jdk.internal.vm.si.impl.asm.tree;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -8,24 +7,34 @@ import jdk.internal.vm.si.impl.asm.Label;
 import jdk.internal.vm.si.impl.asm.MethodVisitor;
 import jdk.internal.vm.si.impl.bytecode.InstructionDefinition;
 
-public class SuperInstrInsnNode extends AbstractInsnNode {
+public class SuperInstrInsnNode extends AbstractInsnNode implements ProfileableInsnNode {
 
 	private final AbstractInsnNode head;
-	private final List<AbstractInsnNode> tail;
+	//private final List<AbstractInsnNode> tail;
 	private final InstructionDefinition definition;
 	
 	/**
-	 * Construct a new superinstruction node.
+	 * Construct a new superinstruction node. The superinstruction node will effectively remove the head and tail from the InsnList
+	 * by linking in their place.
 	 * @param opcode the opcode of this superinstruction.
 	 * @param head the first instruction this opcode replaces -- operands from that instruction will be taken.
 	 * @param tail the rest of the instructions covered by this superinstruction, which will be visited immediately
 	 * following this instruction. May also be superinstructions in of themselves.
+	 * @param instructions list of instructions to add it to.
 	 */
-	public SuperInstrInsnNode(InstructionDefinition definition, AbstractInsnNode head, List<AbstractInsnNode> tail) {
+	public SuperInstrInsnNode(InstructionDefinition definition, AbstractInsnNode head, InsnList instructions) {
 		super(definition.getOpcode());
 		this.definition = definition;
 		this.head = Objects.requireNonNull(head);
-		this.tail = Objects.requireNonNull(tail);
+		
+		// Connect the previous to this in InsnList
+		this.setPrevious(head.getPrevious());
+		this.setNext(head.getNext());
+		
+		if (head.getPrevious() == null)
+			instructions.setFirst(this);
+		else
+			head.getPrevious().setNext(this);
 	}
 
 	@Override
@@ -114,10 +123,6 @@ public class SuperInstrInsnNode extends AbstractInsnNode {
 		}
 		
 		head.acceptAnnotations(methodVisitor);
-		
-		for (var node : tail) {
-			node.accept(methodVisitor);
-		}
 	}
 
 	@Override
@@ -129,4 +134,20 @@ public class SuperInstrInsnNode extends AbstractInsnNode {
 		return definition;
 	}
 
+	@Override
+	public boolean hasProfileData() {
+		return this.head instanceof ProfileableInsnNode && ((ProfileableInsnNode) head).hasProfileData(); 
+	}
+
+	@Override
+	public long getWeight() {
+		if (!hasProfileData())
+			throw new IllegalStateException("SuperInstrInsnNode has no profiling data");
+		return ((ProfileableInsnNode) head).getWeight();
+	}
+
+	@Override
+	public int getUnwrappedOpcode() {
+		return this.head.getUnwrappedOpcode();
+	}
 }

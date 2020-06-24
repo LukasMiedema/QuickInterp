@@ -33,6 +33,7 @@ import java.util.Map;
 
 import jdk.internal.vm.si.impl.asm.ClassReader;
 import jdk.internal.vm.si.impl.asm.MethodVisitor;
+import jdk.internal.vm.si.impl.bytecode.BytecodePrimitive;
 
 /**
  * A node that represents a bytecode instruction. <i>An instruction can appear
@@ -95,6 +96,9 @@ public abstract class AbstractInsnNode {
 	
 	/** The type of {@link SyntheticInsnNode} "instruction". */
 	public static final int SYNTHETIC_INSN = 17;
+	
+	/** The type of {@link WideInsnNode} instructions */
+	public static final int WIDE_INSN = 18;
 
 	/** The opcode of this instruction. */
 	protected int opcode;
@@ -121,10 +125,10 @@ public abstract class AbstractInsnNode {
 	public List<TypeAnnotationNode> invisibleTypeAnnotations;
 
 	/** The previous instruction in the list to which this instruction belongs. */
-	AbstractInsnNode previousInsn;
+	private AbstractInsnNode previousInsn;
 
 	/** The next instruction in the list to which this instruction belongs. */
-	AbstractInsnNode nextInsn;
+	private AbstractInsnNode nextInsn;
 
 	/**
 	 * The index of this instruction in the list to which it belongs. The value of
@@ -150,6 +154,15 @@ public abstract class AbstractInsnNode {
 	 * @return the opcode of this instruction.
 	 */
 	public int getOpcode() {
+		return opcode;
+	}
+	
+	/**
+	 * Return the unwrapped opcode, usually the regular opcode.
+	 * In case of a superinstruction, this is the opcode of the original JVM instruction that is wrapped.
+	 * @return the unwrapped opcode of this instruction.
+	 */
+	public int getUnwrappedOpcode() {
 		return opcode;
 	}
 
@@ -182,7 +195,15 @@ public abstract class AbstractInsnNode {
 	public AbstractInsnNode getNext() {
 		return nextInsn;
 	}
-	
+
+	public void setPrevious(AbstractInsnNode previousInsn) {
+		this.previousInsn = previousInsn;
+	}
+
+	public void setNext(AbstractInsnNode nextInsn) {
+		this.nextInsn = nextInsn;
+	}
+
 	/**
 	 * Makes the given method visitor visit this instruction.
 	 *
@@ -275,5 +296,10 @@ public abstract class AbstractInsnNode {
 			}
 		}
 		return this;
+	}
+	
+	@Override
+	public String toString() {
+		return this.getClass().getSimpleName() + "[" + BytecodePrimitive.byOpcode(this.opcode)  + "]";
 	}
 }

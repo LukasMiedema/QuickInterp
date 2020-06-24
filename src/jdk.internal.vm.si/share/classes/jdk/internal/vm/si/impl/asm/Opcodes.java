@@ -502,6 +502,7 @@ public interface Opcodes {
 	int INSTANCEOF = 193; // -
 	int MONITORENTER = 194; // visitInsn
 	int MONITOREXIT = 195; // -
+	int WIDE = 196;
 	int MULTIANEWARRAY = 197; // visitMultiANewArrayInsn
 	int IFNULL = 198; // visitJumpInsn
 	int IFNONNULL = 199; // -

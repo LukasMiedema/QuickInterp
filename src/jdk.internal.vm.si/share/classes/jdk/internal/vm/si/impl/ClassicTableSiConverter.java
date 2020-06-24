@@ -1,7 +1,10 @@
 package jdk.internal.vm.si.impl;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.ListIterator;
 
+import jdk.internal.vm.si.impl.asm.tree.AbstractInsnNode;
 import jdk.internal.vm.si.impl.asm.tree.InsnList;
 import jdk.internal.vm.si.impl.asm.tree.SuperInstrInsnNode;
 import jdk.internal.vm.si.impl.bytecode.InstructionDefinition;
@@ -29,33 +32,25 @@ public class ClassicTableSiConverter implements AsmSiConverter {
 	
 
 	public void convert(InsnList instructions) {
-		var it = instructions.iterator();
-		var previousInstr = it.next();
+		var windowStart = instructions.getFirst();
 		
-		while (it.hasNext()) {
-			var instr = it.next();
-			InstructionDefinition foundInstr = superinstructionTable
-					.lookup(previousInstr.getOpcode(), instr.getOpcode());
-			//System.out.println("Testing (0x" + Integer.toString(previousInstr.getOpcode(), 16) + ",0x" + Integer.toString(instr.getOpcode(), 16) + ")");
-			if (foundInstr != null) {
-				
-				// Replace the previous instruction with a superinstruction
-				var newInstruction = new SuperInstrInsnNode(foundInstr, previousInstr, List.of(instr));
-				it.previous();
-				it.previous();
-				it.set(newInstruction);
-				it.next();
-				it.next();
-				
-				// Remove the second instruction, it will be wrapped and part of the super instruction node
-				it.remove();
-
-				// Report the replaced instruction as the previous one, as it spans more than one instruction
-				// Leave the 'current' instruction in place. It will be skipped at runtime unless it's a branch target
-				previousInstr = newInstruction;
-			} else {
-				previousInstr = instr;
+		do {
+			if (windowStart.getType() == AbstractInsnNode.LABEL) continue;
+			var windowEnd = windowStart;
+			while ((windowEnd = windowEnd.getNext()) != null) {
+				if (windowEnd.getType() == AbstractInsnNode.LABEL) continue;
+				InstructionDefinition foundInstr = superinstructionTable
+						.lookup(windowStart.getOpcode(), windowEnd.getOpcode());
+				if (foundInstr == null) {
+					// Go to the next start window
+					break;
+				} else {
+					// Superinstruction is placed at window start
+					// This may wrap one node multiple times but that's okay
+					windowStart = new SuperInstrInsnNode(foundInstr, windowStart, instructions);
+				}
 			}
-		}
+			
+		} while ((windowStart = windowStart.getNext()) != null);
 	}
 }

@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.ObjectInputStream;
 import java.lang.System.Logger.Level;
+import java.util.ArrayList;
 import java.util.stream.Collectors;
 
 import jdk.internal.vm.si.ClassBytecodeFormatConverter;
@@ -23,13 +24,13 @@ public class ClassBytecodeFormatConverterImpl implements ClassBytecodeFormatConv
 		try (var ois = new ObjectInputStream(new FileInputStream(file))) {
 			var configuration = (InstructionSetConfiguration) ois.readObject();
 			converter = configuration.getConverterClass().getConstructor().newInstance();
+			//converter = new EquivalenceSiConverter();
 			
 			var instrList = configuration.getInstructions();
 //			// Temp debugging
 			var superinstructions = instrList.stream().filter(InstructionDefinition::isSuperinstruction).collect(Collectors.toList());
-//			var regularInstructions = instrList.stream().filter(id -> !id.isSuperinstruction()).collect(Collectors.toList());
-//			
-//			superinstructions = superinstructions.subList(58, 59);
+//			var regularInstructions = instrList.stream().filter(id -> !id.isSuperinstruction()).collect(Collectors.toList());		
+//			superinstructions = superinstructions.subList(78, 81); // low: 75, high: 81
 			
 			if (System.getProperty("printSuperinstructions") != null) {
 				System.out.println("=== Using SI Converter: " + converter.getName() + " ===");
@@ -38,10 +39,10 @@ public class ClassBytecodeFormatConverterImpl implements ClassBytecodeFormatConv
 				System.out.println();
 			}
 //			
-//			var out = new ArrayList<InstructionDefinition>();
-//			out.addAll(regularInstructions);
-//			out.addAll(superinstructions);
-//			
+//			instrList = new ArrayList<InstructionDefinition>();
+//			instrList.addAll(regularInstructions);
+//			instrList.addAll(superinstructions);
+			
 			converter.setInstructions(instrList);
 		} catch (Exception e) {
 			System.Logger log = System.getLogger(ClassBytecodeFormatConverterImpl.class.getName()); 
@@ -57,7 +58,8 @@ public class ClassBytecodeFormatConverterImpl implements ClassBytecodeFormatConv
 	}
 	
 	private static byte[] convertClassInternal(ClassReader reader) {
-		var writer = new ClassWriter(0);
+		// keep the original CP order in case we are doing SI conversion on an anonymous class with CP pool patches
+		var writer = new ClassWriter(reader, 0);
 		
 		ClassNode node = new ClassNode();
 		reader.accept(node, ClassReader.SKIP_FRAMES | ClassReader.SKIP_DEBUG);

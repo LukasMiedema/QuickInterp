@@ -30,48 +30,38 @@ public class ImprovedTreeSiConverter implements AsmSiConverter {
 		this.superinstructionTree = ImprovedSuperinstructionTree.build(instructionSet);
 	}
 	
+	private static AbstractInsnNode getNextNonLabelNode(AbstractInsnNode node) {
+		while (node != null && (node = node.getNext()) != null && node.getType() == AbstractInsnNode.LABEL);
+		return node;
+	}
+	
 
 	public void convert(InsnList instructions) {
-		var start = instructions.getFirst();
-		var end = instructions.getFirst();
+		var windowStart = instructions.getFirst();
+		var windowEnd = instructions.getFirst();
 		InstructionDefinition lastValidSuperinstruction = null;
 		
 		// Start and tail are the two pointers, where the distance they span is considered as a superinstruction
 		// lastValidSuperinstruction is exactly that
-		
 		var cursor = this.superinstructionTree.cursor();
-		do {
-			if (cursor.hasDefinition())
-				lastValidSuperinstruction = cursor.getDefinition();
-			
-			if (end == null || !cursor.lookup(end.getOpcode())) {
+		do {			
+			if (windowEnd == null || !cursor.lookup(windowEnd.getOpcode())) {
 				// Lookup failed --> no superinstruction possible anymore
 				if (lastValidSuperinstruction != null) {
-					// Place this superinstruction
-					int length = lastValidSuperinstruction.getPrimitives().size();
-					var tail = new ArrayList<AbstractInsnNode>(length - 1);
-					var it = instructions.iterator(start);
-					it.next();
-					
-					for (int i = 1; i < length; i++) {
-						var next = it.next();
-						it.remove();
-						tail.add(next);
-					}
-					// System.out.println("Creating " + start.getOpcode() + " [" + tail.stream().map(n -> Integer.toString(n.getOpcode())).collect(Collectors.joining(", ")) + "]");
-					var superInstruction = new SuperInstrInsnNode(lastValidSuperinstruction, start, tail);
-					instructions.set(start, superInstruction);
-					start = superInstruction; // "start" itself is no longer valid
+					// The superinstruction replaces the windowStart node
+					windowStart = new SuperInstrInsnNode(lastValidSuperinstruction, windowStart, instructions);
 				}
 				
 				// Restart the search for the next instruction
 				cursor = this.superinstructionTree.cursor();
-				start = start.getNext();
-				end = start;
+				windowStart = getNextNonLabelNode(windowStart);
+				windowEnd = windowStart;
 				lastValidSuperinstruction = null;
 			} else {
-				end = end.getNext();
+				if (cursor.hasDefinition())
+					lastValidSuperinstruction = cursor.getDefinition();
+				windowEnd = getNextNonLabelNode(windowEnd);
 			}
-		} while (start != null);
+		} while (windowStart != null);
 	}
 }
