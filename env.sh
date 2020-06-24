@@ -1,1 +1,1 @@
-export _JAVA_OPTIONS="-XX:+UnlockExperimentalVMOptions -XX:+UseEpsilonGC -Xverify:none"
+export _JAVA_OPTIONS="-Xverify:none -XX:+UnlockExperimentalVMOptions -XX:+UseSuperinstructions -XX:+UseEpsilonGC -XX:+UnlockDiagnosticVMOptions -XX:-VerifyBeforeExit"
