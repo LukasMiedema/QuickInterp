@@ -467,8 +467,8 @@ BasicType Method::result_type() const {
 
 
 bool Method::is_empty_method() const {
-  return  code_size() == 2
-      && READ_BYTECODE(code_base()) == Bytecodes::_return;
+  return (code_size() == 2 && READ_BYTECODE(code_base()) == Bytecodes::_return)
+      || (code_size() == 8 && READ_BYTECODE(code_base()) == Bytecodes::_profile && READ_BYTECODE(code_base() + 6) == Bytecodes::_return);
 }
 
 

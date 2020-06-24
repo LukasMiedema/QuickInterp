@@ -169,6 +169,20 @@ public class InsnList implements Iterable<AbstractInsnNode> {
 	public ListIterator<AbstractInsnNode> iterator(final int index) {
 		return new InsnListIterator(index);
 	}
+	
+	
+	/**
+	 * Returns an iterator over the instructions in this list.
+	 *
+	 * @param instruction for the iterator to start at.
+	 * @return an iterator over the instructions in this list.
+	 */
+	@SuppressWarnings("unchecked")
+	public ListIterator<AbstractInsnNode> iterator(AbstractInsnNode start) {
+		return new InsnListIterator(start);
+	}
+	
+	
 
 	/**
 	 * Returns an array containing all the instructions in this list.
@@ -504,6 +518,11 @@ public class InsnList implements Iterable<AbstractInsnNode> {
 				nextInsn = get(index);
 				previousInsn = nextInsn.previousInsn;
 			}
+		}
+
+		InsnListIterator(AbstractInsnNode start) {
+			nextInsn = start;
+			previousInsn = start.previousInsn;
 		}
 
 		@Override

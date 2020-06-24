@@ -4,6 +4,8 @@ import static jdk.internal.vm.si.impl.bytecode.BytecodePrimitive.BytecodeFlag.*;
 
 import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.stream.Stream;
 
 public enum BytecodePrimitive {
@@ -33,9 +35,9 @@ public enum BytecodePrimitive {
 	dconst_1		(0x0f,	 2,	 2,	""),
 	bipush			(0x10,	 3,	 1,	"c"),
 	sipush			(0x11,	 4,	 1,	"cc"),
-	ldc				(0x12,	 3,	 1,	"k"),
-	ldc_w			(0x13,	 4,	 1,	"kk"),
-	ldc2_w			(0x14,	 4,	 2,	"kk"),
+	ldc				(0x12,	 3,	 1,	"k",	NO_SUPERINSTRUCTION),
+	ldc_w			(0x13,	 4,	 1,	"kk", 	NO_SUPERINSTRUCTION),
+	ldc2_w			(0x14,	 4,	 2,	"kk",	NO_SUPERINSTRUCTION),
 	iload			(0x15,	 3,	 1,	"i"),
 	lload			(0x16,	 3,	 2,	"i"),
 	fload			(0x17,	 3,	 1,	"i"),
@@ -193,39 +195,51 @@ public enum BytecodePrimitive {
 	dreturn			(0xaf,			"",	TERMINAL),
 	areturn			(0xb0,			"",	TERMINAL),
 	_return			(0xb1,			"",	TERMINAL),
-	getstatic		(0xb2,	4,	 U,	"JJ",	UPDATES_STACK_OFFSET),
-	putstatic		(0xb3,	4,	 U,	"JJ",	UPDATES_STACK_OFFSET),
-	getfield		(0xb4,	4,	 U,	"JJ",	UPDATES_STACK_OFFSET),
-	putfield		(0xb5,	4,	 U, "JJ",	UPDATES_STACK_OFFSET),
-	invokevirtual	(0xb6,			"JJ",	NO_SUPERINSTRUCTION),
-	invokespecial	(0xb7,			"JJ",	NO_SUPERINSTRUCTION),
-	invokestatic	(0xb8,			"JJ",	NO_SUPERINSTRUCTION),
-	invokeinterface	(0xb9,			"JJ__",	NO_SUPERINSTRUCTION),
-	invokedynamic	(0xba,			"JJJJ",	NO_SUPERINSTRUCTION),
+	getstatic		(0xb2,	4,	 U,	"JJ",	UPDATES_STACK_OFFSET, NO_SUPERINSTRUCTION),
+	putstatic		(0xb3,	4,	 U,	"JJ",	UPDATES_STACK_OFFSET, NO_SUPERINSTRUCTION),
+	getfield		(0xb4,	4,	 U,	"JJ",	UPDATES_STACK_OFFSET, NO_SUPERINSTRUCTION),
+	putfield		(0xb5,	4,	 U, "JJ",	UPDATES_STACK_OFFSET, NO_SUPERINSTRUCTION),
+	invokevirtual	(0xb6,			"JJ",	TERMINAL, NO_SUPERINSTRUCTION),
+	invokespecial	(0xb7,			"JJ",	TERMINAL, NO_SUPERINSTRUCTION),
+	invokestatic	(0xb8,			"JJ",	TERMINAL, NO_SUPERINSTRUCTION),
+	invokeinterface	(0xb9,			"JJ__",	TERMINAL, NO_SUPERINSTRUCTION),
+	invokedynamic	(0xba,			"JJJJ",	TERMINAL, NO_SUPERINSTRUCTION),
 	_new			(0xbb,	 4,	 1,	"kk"),
 	newarray		(0xbc,	 3,	 0,	"c"),
 	anewarray		(0xbd,	 4,	 0,	"kk"),
 	arraylength		(0xbe,	 2,	 0,	""),
 	athrow			(0xbf,			"",	TERMINAL),
-	checkcast		(0xc0,	 4,	 0,	"kk"),
-	_instanceof		(0xc1,	 4,  0,	"kk"),
-	monitorenter	(0xc2,			"",	NO_SUPERINSTRUCTION),
-	monitorexit		(0xc3,	 2, -1,	""),
+	checkcast		(0xc0,	 4,	 0,	"kk",	NO_SUPERINSTRUCTION),
+	_instanceof		(0xc1,	 4,  0,	"kk",	NO_SUPERINSTRUCTION),
+	monitorenter	(0xc2,			"",	TERMINAL, NO_SUPERINSTRUCTION),
+	monitorexit		(0xc3,	 2, -1,	"",	NO_SUPERINSTRUCTION),
 	wide			(0xc4,			null,	UPDATES_STACK_OFFSET, UPDATES_PC_OFFSET),
-	multianewarray	(0xc5,	 5,  U,	"kkc",	UPDATES_STACK_OFFSET),
-	ifnull			(0xc6,	 4,	-1,	"oo"),
-	ifnonnull		(0xc7,	 4,	-1,	"oo"),
+	multianewarray	(0xc5,	 5,  U,	"kkc",	NO_SUPERINSTRUCTION, UPDATES_STACK_OFFSET),
+	ifnull			(0xc6,	 4,	-1,	"oo",	JUMP),
+	ifnonnull		(0xc7,	 4,	-1,	"oo",	JUMP),
 	goto_w			(0xc8,			"oooo",	TERMINAL, JUMP),
 	jsr_w			(0xc9,			"oooo",	TERMINAL, JUMP),
-	breakpoint		(0xca,			null,	NO_SUPERINSTRUCTION),
+	breakpoint		(0xca,			null,	TERMINAL, NO_SUPERINSTRUCTION),
 	fast_aldc		(230,	 3,  1,	"j"),
 	fast_aldc_w		(231,	 4,  1,	"JJ"),
 	return_register_finalizer
-					(232, 			"",	NO_SUPERINSTRUCTION),
-	invokehandle	(233,			"JJ",	NO_SUPERINSTRUCTION),
+					(232, 			"",	TERMINAL, NO_SUPERINSTRUCTION),
+	invokehandle	(233,			"JJ",	TERMINAL, NO_SUPERINSTRUCTION),
 	
-	profile			(234,			"", NO_SUPERINSTRUCTION),
+	profile			(238,	 6,  0, "IIII", NO_SUPERINSTRUCTION),
 	end_sequence	(-1,	 0,	 0,	null,	TERMINAL);
+	
+	private static BytecodePrimitive[] OPCODE_MAP = new BytecodePrimitive[238 + 1];
+	static {
+		for (var primitive : values()) {
+			if (primitive.instr >= 0)
+				OPCODE_MAP[primitive.instr] = primitive;
+		}
+	}
+	
+	public static BytecodePrimitive byOpcode(int opcode) {
+		return OPCODE_MAP[opcode];
+	}
 	
 	/*
 	 * TODO:
@@ -235,8 +249,8 @@ public enum BytecodePrimitive {
 	 * - [x] make code generator
 	 * - [x] edit bytecodeInterpreter.cpp to use the generated file
 	 * - [x] make an interpreter with the default instruction set (no changes)
-	 * - get that to work
-	 * - see what rewriter.cpp does to get fast instructions
+	 * - [x] get that to work
+	 * - [~] see what rewriter.cpp does to get fast instructions
 	 * - port that to Java / the codestretcher agent
 	 */
 	
@@ -262,11 +276,11 @@ public enum BytecodePrimitive {
 		if (instr == U || stack == U) {
 			Stream<BytecodeFlag> extraFlags;
 			if (instr == U && stack == U)
-				extraFlags = Stream.of(UNKNOWN_PC_OFFSET, UNKNOWN_STACK_OFFSET);
+				extraFlags = Stream.of(NO_SUPERINSTRUCTION, UNKNOWN_PC_OFFSET, UNKNOWN_STACK_OFFSET);
 			else if (instr == U)
-				extraFlags = Stream.of(UNKNOWN_PC_OFFSET);
+				extraFlags = Stream.of(NO_SUPERINSTRUCTION, UNKNOWN_PC_OFFSET);
 			else
-				extraFlags = Stream.of(UNKNOWN_STACK_OFFSET);
+				extraFlags = Stream.of(NO_SUPERINSTRUCTION, UNKNOWN_STACK_OFFSET);
 			
 			Stream.concat(
 					Arrays.stream(flags), extraFlags)
@@ -303,7 +317,11 @@ public enum BytecodePrimitive {
 		return instr;
 	}
 
-	public int getPc() {
+	public int getPc(boolean withProfiling) {
+		if (withProfiling && this.hasFlag(JUMP)) {
+			// The format contains four profiling bytes (see Profiler.hpp) added to the end
+			return pc + 4;
+		}
 		return pc;
 	}
 
@@ -313,9 +331,14 @@ public enum BytecodePrimitive {
 	
 	/**
 	 * The format string without 'b' prefix.
+	 * @param withProfiling 
 	 * @return
 	 */
-	public String getFormat() {
+	public String getFormat(boolean withProfiling) {
+		if (withProfiling && this.hasFlag(JUMP)) {
+			// The format contains four profiling bytes (see Profiler.hpp) added to the end
+			return format + "IIII";
+		}
 		return format;
 	}
 

@@ -43,9 +43,9 @@ bool            Bytecodes::_is_initialized = false;
 const char*     Bytecodes::_name          [Bytecodes::number_of_codes];
 BasicType       Bytecodes::_result_type   [Bytecodes::number_of_codes];
 s_char          Bytecodes::_depth         [Bytecodes::number_of_codes];
-u_char          Bytecodes::_lengths       [Bytecodes::number_of_codes];
+u_long          Bytecodes::_lengths       [Bytecodes::number_of_codes];
 Bytecodes::Code Bytecodes::_java_code     [Bytecodes::number_of_codes];
-unsigned short  Bytecodes::_flags         [(1<<BitsPerByte)*2];
+unsigned short  Bytecodes::_flags         [(1<<BitsPerShort)*2];
 
 #ifdef ASSERT
 bool Bytecodes::check_method(const Method* method, address bcp) {
@@ -169,13 +169,13 @@ void Bytecodes::def(Code code, const char* name, const char* format, const char*
   _name          [code] = name;
   _result_type   [code] = result_type;
   _depth         [code] = depth;
-  _lengths       [code] = (wlen << 4) | ((len) & 0xF);
+  _lengths       [code] = (wlen << 16) | ((len) & 0xFFFF);
   _java_code     [code] = java_code;
   int bc_flags = 0;
   if (can_trap)           bc_flags |= _bc_can_trap;
   if (java_code != code)  bc_flags |= _bc_can_rewrite;
-  _flags[(u1)code+0*(1<<BitsPerByte)] = compute_flags(format,      bc_flags);
-  _flags[(u1)code+1*(1<<BitsPerByte)] = compute_flags(wide_format, bc_flags);
+  _flags[(u2)code+0*(1<<BitsPerShort)] = compute_flags(format,      bc_flags);
+  _flags[(u2)code+1*(1<<BitsPerShort)] = compute_flags(wide_format, bc_flags);
   assert(is_defined(code)      == (format != NULL),      "");
   assert(wide_is_defined(code) == (wide_format != NULL), "");
   assert(length_for(code)      == len, "");
@@ -230,7 +230,8 @@ int Bytecodes::compute_flags(const char* format, int more_flags) {
       assert(flags == (jchar)flags, "change _format_flags");
       return flags;
 
-    case '_': continue;         // ignore these
+    case '_':
+    case 'b':  continue;         // ignore these
 
     case 'j': this_flag = _fmt_has_j; has_jbo = 1; break;
     case 'k': this_flag = _fmt_has_k; has_jbo = 1; break;
@@ -250,7 +251,7 @@ int Bytecodes::compute_flags(const char* format, int more_flags) {
 
     flags |= this_flag;
 
-    guarantee(!(has_jbo && has_nbo), "mixed byte orders in format");
+    //guarantee(!(has_jbo && has_nbo), "mixed byte orders in format");
     if (has_nbo)
       flags |= _fmt_has_nbo;
 
@@ -265,10 +266,10 @@ int Bytecodes::compute_flags(const char* format, int more_flags) {
       /*default: guarantee(false, "bad rep count in format");*/
       }
     }
-    guarantee(has_size == 0 ||                     // no field yet
-              this_size == has_size ||             // same size
-              this_size < has_size && *fp == '\0', // last field can be short
-              "mixed field sizes in format");
+//    guarantee(has_size == 0 ||                     // no field yet
+//              this_size == has_size ||             // same size
+//              this_size < has_size && *fp == '\0', // last field can be short
+//              "mixed field sizes in format");
     has_size = this_size;
   }
 }
@@ -492,6 +493,7 @@ void Bytecodes::initialize() {
   def(_goto_w              , "goto_w"              , "boooo", NULL    , T_VOID   ,  0, false);
   def(_jsr_w               , "jsr_w"               , "boooo", NULL    , T_INT    ,  0, false);
   def(_breakpoint          , "breakpoint"          , ""     , NULL    , T_VOID   ,  0, true);
+  def(_profile             , "profile"             , "bIIII", NULL    , T_VOID   ,  0, false);
 
   // superinstructions
 #include "generated/bytecodes.definitions.hpp"

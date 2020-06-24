@@ -33,6 +33,7 @@
 #include "runtime/globals.hpp"
 #include "utilities/globalDefinitions.hpp"
 #include "utilities/macros.hpp"
+#include "si/profiler.hpp"
 
 #ifdef CC_INTERP
 

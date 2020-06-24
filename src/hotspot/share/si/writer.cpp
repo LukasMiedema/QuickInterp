@@ -32,8 +32,16 @@ namespace jnif {
             offset += 4;
         }
 
+        inline void writeu4le(u4) {
+            offset += 4;
+        }
+
         inline void writecount(const void*, int count) {
             offset += count;
+        }
+
+        inline void writeOpcode(u2) {
+            offset += 1;
         }
 
         inline int getOffset() const {
@@ -87,6 +95,27 @@ namespace jnif {
             buffer[offset + 3] = ((u1*) &value)[0];
 
             offset += 4;
+        }
+
+        void writeu4le(u4 value) {
+            JnifError::check(offset + 4 <= len, "Invalid write: offset: ", offset + 4,
+                             ", len: ", len);
+            buffer[offset + 3] = ((u1*) &value)[3];
+            buffer[offset + 2] = ((u1*) &value)[2];
+            buffer[offset + 1] = ((u1*) &value)[1];
+            buffer[offset + 0] = ((u1*) &value)[0];
+
+            offset += 4;
+        }
+
+        void writeOpcode(u2 value) {
+            // Write a 16-bit opcode overwriting the most significant byte with the previous byte in the buffer
+            JnifError::check(offset + 1 <= len, "Invalid write: offset: ", offset + 1,
+                             ", len: ", len);
+            buffer[offset - 1] = ((u1*) &value)[1];
+            buffer[offset + 0] = ((u1*) &value)[0];
+
+            offset += 1;
         }
 
         void writecount(const void* source, int count) {
@@ -448,7 +477,10 @@ namespace jnif {
                     continue;
                 }
 
-                bw.writeu1((u1)inst.opcode);
+                if (inst.opcode == Opcode::nop)
+                    bw.writeu1((u1) Opcode::nop);
+                else
+                    bw.writeOpcode((u2) inst.fullOpcode());
 
                 switch (inst.kind) {
                     case KIND_ZERO:
@@ -497,6 +529,7 @@ namespace jnif {
                         //fprintf(stderr, "target offset @ write: %d\n",	inst.jump.label2->label.offset);
 
                         bool wide = inst.kind == KIND_JUMP_W;
+                        bool profile = inst.jump()->with_profile;
                         int jumppos = pos(offset) - 1;
                         int relativeTarget = inst.jump()->label2->label()->offset - jumppos;
 
@@ -504,6 +537,9 @@ namespace jnif {
                             bw.writeu4((u4)relativeTarget);
                         else
                             bw.writeu2((u2)relativeTarget);
+
+                        if (profile)
+                            bw.writeu4le((u4)inst.jump()->profile_id);
                         break;
                     }
                     case KIND_TABLESWITCH: {
@@ -546,7 +582,7 @@ namespace jnif {
                         Error::jnifAssert(check, "Padding offset must be mod 4: %d",
                                       pos(offset));
 
-                        bw.writeu4(inst.ls()->defbyte->label()->offset - lspos);
+                        bw.writeu4(inst.ls()->def->label()->offset - lspos);
                         bw.writeu4(inst.ls()->npairs);
 
                         for (u4 i = 0; i < inst.ls()->npairs; i++) {
@@ -582,6 +618,9 @@ namespace jnif {
                     case KIND_MULTIARRAY:
                         bw.writeu2(inst.multiarray()->classIndex);
                         bw.writeu1(inst.multiarray()->dims);
+                        break;
+                    case KIND_PROFILE:
+                        bw.writeu4le(inst.profile()->profile_id);
                         break;
                     case KIND_RESERVED:
                         throw Exception("not implemetd");
@@ -700,5 +739,4 @@ namespace jnif {
         BufferWriter bw(fileImage, fileImageLen);
         ClassWriter<BufferWriter>(bw).writeClassFile(*this);
     }
-
 }

@@ -369,6 +369,35 @@ namespace jnif {
             JnifError::jnifAssert(cond, "Inst is not a ", kindName, ": ", *this);
         }
 
+        Opcode Inst::fullOpcode() {
+            if (isJump() && jump()->with_profile)
+               switch (opcode) {
+                   case Opcode::ifeq: return Opcode::_profile_ifeq;
+                   case Opcode::ifne: return Opcode::_profile_ifne;
+                   case Opcode::iflt: return Opcode::_profile_iflt;
+                   case Opcode::ifge: return Opcode::_profile_ifge;
+                   case Opcode::ifgt: return Opcode::_profile_ifgt;
+                   case Opcode::ifle: return Opcode::_profile_ifle;
+                   case Opcode::if_icmpeq: return Opcode::_profile_if_icmpeq;
+                   case Opcode::if_icmpne: return Opcode::_profile_if_icmpne;
+                   case Opcode::if_icmplt: return Opcode::_profile_if_icmplt;
+                   case Opcode::if_icmpge: return Opcode::_profile_if_icmpge;
+                   case Opcode::if_icmpgt: return Opcode::_profile_if_icmpgt;
+                   case Opcode::if_icmple: return Opcode::_profile_if_icmple;
+                   case Opcode::if_acmpeq: return Opcode::_profile_if_acmpeq;
+                   case Opcode::if_acmpne: return Opcode::_profile_if_acmpne;
+                   case Opcode::GOTO: return Opcode::_profile__goto;
+                   case Opcode::jsr: return Opcode::_profile_jsr;
+                   case Opcode::ret: return Opcode::_profile_ret;
+                   case Opcode::ifnull: return Opcode::_profile_ifnull;
+                   case Opcode::ifnonnull: return Opcode::_profile_ifnonnull;
+                   case Opcode::goto_w: return Opcode::_profile_goto_w;
+                   case Opcode::jsr_w: return Opcode::_profile_jsr_w;
+                   default: throw Exception("Invalid profile instruction");
+               }
+            return opcode;
+        }
+
 
         Inst* InstList::Iterator::operator*() {
             JnifError::jnifAssert(position != nullptr, "Dereferencing * on NULL");
@@ -428,6 +457,14 @@ namespace jnif {
 
         ZeroInst* InstList::addZero(Opcode opcode, Inst* pos) {
             ZeroInst* inst = _create<ZeroInst>(opcode, constPool);
+
+            addInst(inst, pos);
+
+            return inst;
+        }
+
+        ProfileInst* InstList::addProfile(u4 profile_id, Inst* pos) {
+            ProfileInst* inst = _create<ProfileInst>(profile_id, constPool);
 
             addInst(inst, pos);
 

@@ -5,11 +5,16 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+import jdk.internal.vm.si.impl.bytecode.BytecodePrimitive.BytecodeFlag;
 
 public class InstructionSetDefinition {
 	
 	public static final boolean DEBUG = false;
-	private int nextOpcode = 238;
+	private int nextOpcode = 0;
 	
 	public static InstructionSetDefinition defaultDefinition() {
 		InstructionSetDefinition definition = new InstructionSetDefinition();
@@ -32,6 +37,28 @@ public class InstructionSetDefinition {
 				.max(Comparator.comparingInt(InstructionDefinition::getOpcode))
 				.get()
 				.getOpcode() + 1;
+	}
+	
+	public Map<BytecodePrimitive, InstructionDefinition> addProfiling() {
+		return Arrays.stream(BytecodePrimitive.values())
+				.filter(p -> p.hasFlag(BytecodeFlag.JUMP))
+				.filter(p -> p != BytecodePrimitive.lookupswitch && p != BytecodePrimitive.tableswitch)
+				.collect(Collectors.toMap(Function.identity(), p -> this.addProfilingInstruction("profile_" + p.name(), p)));
+	}
+
+	/**
+	 * Create a profiling variant for the given instruction. The primitive must have the JUMP flag set.
+	 * @param name the name of the instruction.
+	 * @param primitive the primitive.
+	 * @return the instruction definition.
+	 */
+	public InstructionDefinition addProfilingInstruction(String name, BytecodePrimitive primitive) {
+		if (!primitive.hasFlag(BytecodeFlag.JUMP))
+			throw new IllegalArgumentException("Cannot make profiling variant for primitive " + primitive);
+		int opcode = this.nextOpcode++;
+		InstructionDefinition def = new InstructionDefinition(opcode, name, true, List.of(primitive));
+		this.instructions.add(def);
+		return def;
 	}
 
 	/**
@@ -56,6 +83,19 @@ public class InstructionSetDefinition {
 	 */
 	public InstructionSetDefinition instr(String name, BytecodePrimitive... primitives) {
 		InstructionDefinition def = new InstructionDefinition(this.nextOpcode++, name, List.of(primitives));
+		this.instructions.add(def);
+		return this;
+	}
+
+	/**
+	 * Fluent adder for a new instruction.
+	 * @param name
+	 * @param primitives
+	 * @return 
+	 * @return
+	 */
+	public InstructionSetDefinition instr(String name, List<BytecodePrimitive> primitives) {
+		InstructionDefinition def = new InstructionDefinition(this.nextOpcode++, name, primitives);
 		this.instructions.add(def);
 		return this;
 	}

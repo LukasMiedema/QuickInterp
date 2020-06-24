@@ -266,7 +266,7 @@ namespace jnif {
                     }
                     break;
                 case KIND_LOOKUPSWITCH:
-                    os << inst.ls()->defbyte->label()->id << " " << inst.ls()->npairs
+                    os << inst.ls()->def->label()->id << " " << inst.ls()->npairs
                        << ":";
 
                     for (u4 i = 0; i < inst.ls()->npairs; i++) {

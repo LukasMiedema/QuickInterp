@@ -1,4 +1,5 @@
 #include "codestretcher.hpp"
+#include "profiler.hpp"
 #include <iostream>
 #include <fstream>
 #include <algorithm>
@@ -8,10 +9,49 @@ using std::cout;
 
 CodeStretcher::CodeStretcher(jvmtiEnv *env, const char *name, jint data_len, unsigned char *data) :
     env(env), name(name), data_len(data_len), data(data) {
-
+  unique_key = compute_unique_key();
 }
 
-void CodeStretcher::rewrite_class_native(void) {
+void CodeStretcher::insert_lec_before(jnif::Inst *insn, jnif::Method &method) {
+  jnif::InstList &instList = method.instList();
+  auto nop1 = instList.addZero(jnif::Opcode::nop, insn);
+  auto insert1 = instList.addProfile(Profiler::allocate_instruction(this->unique_key, method.getName(), method.getDesc(), insn->_offset, BranchPointType::LOCAL_EXECUTION_COUNTER), insn);
+
+  // All get the bco of the instruction they replace
+  nop1->_offset = insn->prev->_offset;
+  insert1->_offset = insn->_offset;
+}
+
+void CodeStretcher::insert_lec_after_label(jnif::LabelInst *label, jnif::Method &method) {
+  // Labels are a filthy hack with codestretching, they are placed -within- the codestretched instruction
+  // Basically, it looks like this:
+  //   <nop1>
+  //   <label>
+  //   <instr1>
+  // And we make it look like this
+  //   <nop1>
+  //   <label>
+  //   <instr2>
+  //   <nop2>
+  //   <instr1>
+
+  // So to insert something after the label, we insert the new instruction and then a nop, not the other way around
+  jnif::InstList &instList = method.instList();
+  jnif::Inst* insn_nop = label->prev; // this is <nop1>, use this for the bco
+  jnif::Inst* insn = label->next; // this is <instr1>
+
+  // Insert <insert2> before
+  auto insert2 = instList.addProfile(Profiler::allocate_instruction(this->unique_key, method.getName(), method.getDesc(), insn_nop->_offset, BranchPointType::LOCAL_EXECUTION_COUNTER), insn);
+
+  // Insert <nop2>
+  auto nop2 = instList.addZero(jnif::Opcode::nop, insn);
+
+  // All get the bco of the previous instruction (nop1 or instr1)
+  nop2->_offset = insn_nop->_offset;
+  insert2->_offset = insn->_offset;
+}
+
+void CodeStretcher::rewrite_class_native(bool enable_profiling) {
   try {
     jnif::parser::ClassFileParser cf(this->data, this->data_len);
     for (jnif::Method &method : cf.methods) {
@@ -38,6 +78,68 @@ void CodeStretcher::rewrite_class_native(void) {
             // In other words, they are off by one byte. This is corrected by also offsetting the
             // labels by one byte, by putting them within the instruction.
             ++it;
+          }
+        }
+      }
+    }
+
+    // All instructions are stretched
+    // If profiling is enabled, and instr is a jump instruction, embed profiling data
+    // See Profiler.hpp
+    if (enable_profiling) {
+      // By forcing a write with any writer (SizeWriter or whatever), the bco within the instruction
+      // stream is set on every Insn instance
+
+      this->data_len = cf.computeSize();
+      this->env->Allocate(this->data_len, &this->data);
+      cf.write(this->data, this->data_len);
+      dump_to_file("class-dump/" + unique_key);
+      this->env->Deallocate(this->data);
+
+      for (jnif::Method &method : cf.methods) {
+        if (method.hasCode()) {
+
+          // Modify all instructions again
+          jnif::InstList &instList = method.instList();
+          auto it = instList.begin();
+          insert_lec_before(*it, method);
+
+          for (; it != instList.end(); ++it) {
+
+            if (it->opcode == jnif::Opcode::nop) {
+              jnif::Inst *insn_nop = *it;
+
+              // Got the first part of an instruction. Find the second part
+              for (++it; it->isLabel(); ++it);
+              jnif::Inst *insn_main = *it;
+              jnif::Inst *insn_next = (*it)->next; // a NOP, do next->next for the real instr
+
+              if (insn_main->isJump()) {
+
+                // Jumps are tracked directly
+                u4 profile_id = Profiler::allocate_instruction(this->unique_key, method.getName(), method.getDesc(), insn_nop->_offset, BranchPointType::JUMP_COUNTER);
+                insn_main->jump()->set_profile(profile_id);
+              } else if (insn_main->isLookupSwitch() || insn_main->isTableSwitch()) {
+
+                // Table/lookupswitch get a LEC at every branch
+                jnif::SwitchInst *insn_switch = (jnif::SwitchInst*) insn_main;
+                insert_lec_after_label(insn_switch->def->label(), method);
+
+                for (std::vector<jnif::Inst*>::iterator target = insn_switch->targets.begin(); target != insn_switch->targets.end(); ++target) {
+                  insert_lec_after_label((*target)->label(), method);
+                }
+
+              } else if (insn_main->isInvoke() || insn_main->isInvokeInterface() || insn_main->isInvokeDynamic()) {
+                // Invokes get a LEC after the invoke, as the invoke may jump to an exception handler (which also have LECs)
+                insert_lec_before(insn_next, method);
+              }
+            }
+          }
+
+          // Add labels for the exception handlers
+          auto exceptions = &method.codeAttr()->exceptions;
+          for (std::vector<jnif::CodeAttr::ExceptionHandler>::iterator handler = exceptions->begin(); handler != exceptions->end(); ++handler) {
+            insert_lec_after_label((jnif::LabelInst*) handler->handlerpc, method);
           }
         }
       }
@@ -105,6 +207,10 @@ void CodeStretcher::dump_to_file(std::string filename) {
   fout.open(filename, std::ios::binary | std::ios::out);
   fout.write((char*) this->data, this->data_len);
   fout.close();
+}
+
+std::string CodeStretcher::get_unique_key() {
+  return this->unique_key;
 }
 
 uint64_t CodeStretcher::compute_hash(void) {

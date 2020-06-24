@@ -1,4 +1,4 @@
-package jdk.internal.vm.si.impl.naive;
+package jdk.internal.vm.si.impl;
 
 import java.lang.System.Logger.Level;
 import java.util.Collections;
@@ -11,23 +11,30 @@ import java.util.stream.Collectors;
 
 import jdk.internal.vm.si.impl.bytecode.InstructionDefinition;
 
-public class SuperinstructionTable {
+/**
+ * Superinstruction table which identifies every superinstruction as a tuple of two
+ * opcodes. Placement is fast, but this approach requires that all longer superinstructions
+ * have all their prefixes as superinstruction as well.
+ * @author lukas
+ *
+ */
+public class ClassicSuperinstructionTable {
 	
 	private final Map<OpcodeTuple, InstructionDefinition> table;
-	private static final System.Logger LOG = System.getLogger(SuperinstructionTable.class.getName()); 
+	private static final System.Logger LOG = System.getLogger(ClassicSuperinstructionTable.class.getName()); 
 
-	private SuperinstructionTable(Map<OpcodeTuple, InstructionDefinition> table) {
+	private ClassicSuperinstructionTable(Map<OpcodeTuple, InstructionDefinition> table) {
 		this.table = table;
 	}
 	
-	public static SuperinstructionTable buildTable(List<InstructionDefinition> instructions) {
+	public static ClassicSuperinstructionTable buildTable(List<InstructionDefinition> instructions) {
 		// Group all instructions by length, shortest first
 		Map<Integer, List<InstructionDefinition>> byLength = instructions.stream()
 			.collect(Collectors.groupingBy(i -> i.getPrimitives().size()));
 		
 		if (byLength.isEmpty()) {
 			LOG.log(Level.WARNING, "Loaded empty superinstruction tables: no substitution can be performed");
-			return new SuperinstructionTable(Collections.emptyMap());
+			return new ClassicSuperinstructionTable(Collections.emptyMap());
 		}
 		
 		int maxLength = instructions.stream()
@@ -67,7 +74,7 @@ public class SuperinstructionTable {
 			
 		}
 		
-		return new SuperinstructionTable(table);
+		return new ClassicSuperinstructionTable(table);
 	}
 	
 

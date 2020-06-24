@@ -20,6 +20,16 @@
 #define DEFAULT default
 #endif
 
+#define PROFILE_UNCONDITIONAL(pc)                     \
+  uint32_t profile_id = Bytes::get_native_u4((pc));   \
+  Profiler::visit(profile_id);
+
+#define PROFILE_CONDITIONAL(condition,pc)             \
+  if (condition) {                                    \
+    PROFILE_UNCONDITIONAL(pc);                        \
+  }
+
+
 // (+0,0) terminal
 #define INSTR_end_sequence(pc,offset)                 \
   SET_PC_AND_TOS(pc, offset);                         \
@@ -267,31 +277,31 @@
 
 // (+2,+1)
 #define INSTR_dup(pc,offset)                          \
-  dup(topOfStack+offset);
+  dup(topOfStack-offset);
 
 // (+2,+2)
 #define INSTR_dup2(pc,offset)                         \
-  dup2(topOfStack+offset);
+  dup2(topOfStack-offset);
 
 // (+2,+1)
 #define INSTR_dup_x1(pc,offset)                       \
-  dup_x1(topOfStack+offset);
+  dup_x1(topOfStack-offset);
 
 // (+2,+1)
 #define INSTR_dup_x2(pc,offset)                       \
-  dup_x2(topOfStack+offset)
+  dup_x2(topOfStack-offset)
 
 // (+2,+2)
 #define INSTR_dup2_x1(pc,offset)                      \
-  dup2_x1(topOfStack+offset);
+  dup2_x1(topOfStack-offset);
 
 // (+2,+2)
 #define INSTR_dup2_x2(pc,offset)                      \
-  dup2_x2(topOfStack+offset)
+  dup2_x2(topOfStack-offset)
 
 // (+2,0)
 #define INSTR_swap(pc,offset)                         \
-  swap(topOfStack+offset);
+  swap(topOfStack-offset);
 
 // (+2,-1) (all)
 #define INSTR_iadd(pc,offset)                         \
@@ -320,7 +330,7 @@
                          offset-2);
 #define INSTR_idiv(pc,offset)                         \
   if (STACK_INT(offset-1) == 0) {                     \
-    /* TODO: fix bco for error? */                    \
+    SET_PC_AND_TOS(pc,offset);                        \
     VM_JAVA_ERROR(vmSymbols::java_lang_ArithmeticException(), \
               "/ by zero", note_div0Check_trap);      \
   }                                                   \
@@ -329,7 +339,7 @@
                          offset-2);
 #define INSTR_irem(pc,offset)                         \
   if (STACK_INT(offset-1) == 0) {                     \
-    /* TODO: fix bco for error? */                    \
+    SET_PC_AND_TOS(pc,offset);                        \
     VM_JAVA_ERROR(vmSymbols::java_lang_ArithmeticException(), \
               "/ by zero", note_div0Check_trap);      \
   }                                                   \
@@ -365,7 +375,7 @@
 #define INSTR_ldiv(pc,offset)                         \
   jlong l1 = STACK_LONG(offset-1);                    \
   if (VMlongEqz(l1)) {                                \
-    /* TODO: fix bco for error? */                    \
+    SET_PC_AND_TOS(pc,offset);                        \
     VM_JAVA_ERROR(vmSymbols::java_lang_ArithmeticException(), \
                   "/ by long zero", note_div0Check_trap); \
   }                                                   \
@@ -375,7 +385,7 @@
 #define INSTR_lrem(pc,offset)                         \
   jlong l1 = STACK_LONG(offset-1);                    \
   if (VMlongEqz(l1)) {                                \
-    /* TODO: fix bco for error? */                    \
+    SET_PC_AND_TOS(pc,offset);                        \
     VM_JAVA_ERROR(vmSymbols::java_lang_ArithmeticException(), \
                   "/ by long zero", note_div0Check_trap); \
   }                                                   \
@@ -526,158 +536,167 @@
 
 /*
  * JUMP INSTRUCTIONS
- * For superinstruction generation there are two types of jump instructions
- * - Regular instructions (with the pc,offset signature) which alter the
- * pc at the end of their execution. They then perform a GOTO dispatching
- * to the instruction at the target bco, leaving superinstruction control flow.
- * - Internal jump instructions (with a pc,offset,jumpLabel signature)
- * These instructions get a jumpLabel where they emit a GOTO towards. This jump
- * label must be emitted within the superinstruction itself, and as such control
- * flow stays within the SI. pc and topOfStack values are not edited.
+ * Jumps can never be converted to a superinstruction, as their operand
+ * is not part of the instruction itself. Superinstruction concatenation
+ * happens purely based on opcode, so with the jump target unknown
+ * no meaningful concatenation can be made (that is,
+ * control flow cannot stay within the superinstruction).
  *
- * TODO: implement all 'internal jump instructions'
- * TODO: check DO_BACKEDGE_CHECKS implementation
+ * All jump instructions respond to a "WITH_PROFILE" macro value, reporting
+ * the branch when taken.
  */
 
 
-// (+4,-2) or jump
+// (+4/+8,-2) or jump
 #define INSTR_if_icmpeq(pc,offset)                    \
   const bool cmp = (STACK_INT(-2) == STACK_INT(-1));\
   /* Profile branch. */                               \
   BI_PROFILE_UPDATE_BRANCH(/*is_taken=*/cmp);         \
   if (cmp) {                                          \
+    PROFILE_CONDITIONAL(WITH_PROFILE, (pc)+4);        \
     int skip = (int16_t)Bytes::get_Java_u2((pc)+2);   \
     address branch_pc = (pc);                         \
     SET_PC_AND_TOS(pc+skip, offset-2);                \
     DO_BACKEDGE_CHECKS(skip, branch_pc);              \
     CONTINUE;                                         \
   }
-// (+4,-1) or jump
+// (+4/+8,-1) or jump
 #define INSTR_ifeq(pc,offset)                         \
   const bool cmp = (STACK_INT(-1) == 0);\
   /* Profile branch. */                               \
   BI_PROFILE_UPDATE_BRANCH(/*is_taken=*/cmp);         \
   if (cmp) {                                          \
+    PROFILE_CONDITIONAL(WITH_PROFILE, (pc)+4);        \
     int skip = (int16_t)Bytes::get_Java_u2((pc)+2);   \
     address branch_pc = (pc);                         \
     SET_PC_AND_TOS(pc+skip, offset-1);                \
     DO_BACKEDGE_CHECKS(skip, branch_pc);              \
     CONTINUE;                                         \
   }
-// (+4,-2) or jump
+// (+4/+8,-2) or jump
 #define INSTR_if_icmpne(pc,offset)                    \
   const bool cmp = (STACK_INT(-2) != STACK_INT(-1));\
   /* Profile branch. */                               \
   BI_PROFILE_UPDATE_BRANCH(/*is_taken=*/cmp);         \
   if (cmp) {                                          \
+    PROFILE_CONDITIONAL(WITH_PROFILE, (pc)+4);        \
     int skip = (int16_t)Bytes::get_Java_u2((pc)+2);   \
     address branch_pc = (pc);                         \
     SET_PC_AND_TOS(pc+skip, offset-2);                \
     DO_BACKEDGE_CHECKS(skip, branch_pc);              \
     CONTINUE;                                         \
   }
-// (+4,-1) or jump
+// (+4/+8,-1) or jump
 #define INSTR_ifne(pc,offset)                         \
   const bool cmp = (STACK_INT(-1) != 0);\
   /* Profile branch. */                               \
   BI_PROFILE_UPDATE_BRANCH(/*is_taken=*/cmp);         \
   if (cmp) {                                          \
+    PROFILE_CONDITIONAL(WITH_PROFILE, (pc)+4);        \
     int skip = (int16_t)Bytes::get_Java_u2((pc)+2);   \
     address branch_pc = (pc);                         \
     SET_PC_AND_TOS(pc+skip, offset-1);                \
     DO_BACKEDGE_CHECKS(skip, branch_pc);              \
     CONTINUE;                                         \
   }
-// (+4,-2) or jump
+// (+4/+8,-2) or jump
 #define INSTR_if_icmpgt(pc,offset)                    \
   const bool cmp = (STACK_INT(-2) > STACK_INT(-1));\
   /* Profile branch. */                               \
   BI_PROFILE_UPDATE_BRANCH(/*is_taken=*/cmp);         \
   if (cmp) {                                          \
+    PROFILE_CONDITIONAL(WITH_PROFILE, (pc)+4);        \
     int skip = (int16_t)Bytes::get_Java_u2((pc)+2);   \
     address branch_pc = (pc);                         \
     SET_PC_AND_TOS(pc+skip, offset-2);                \
     DO_BACKEDGE_CHECKS(skip, branch_pc);              \
     CONTINUE;                                         \
   }
-// (+4,-1) or jump
+// (+4/+8,-1) or jump
 #define INSTR_ifgt(pc,offset)                        \
   const bool cmp = (STACK_INT(-1) > 0);\
   /* Profile branch. */                               \
   BI_PROFILE_UPDATE_BRANCH(/*is_taken=*/cmp);         \
   if (cmp) {                                          \
+    PROFILE_CONDITIONAL(WITH_PROFILE, (pc)+4);        \
     int skip = (int16_t)Bytes::get_Java_u2((pc)+2);   \
     address branch_pc = (pc);                         \
     SET_PC_AND_TOS(pc+skip, offset-1);                \
     DO_BACKEDGE_CHECKS(skip, branch_pc);              \
     CONTINUE;                                         \
   }
-// (+4,-2) or jump
+// (+4/+8,-2) or jump
 #define INSTR_if_icmplt(pc,offset)                    \
   const bool cmp = (STACK_INT(-2) < STACK_INT(-1));\
   /* Profile branch. */                               \
   BI_PROFILE_UPDATE_BRANCH(/*is_taken=*/cmp);         \
   if (cmp) {                                          \
+    PROFILE_CONDITIONAL(WITH_PROFILE, (pc)+4);        \
     int skip = (int16_t)Bytes::get_Java_u2((pc)+2);   \
     address branch_pc = (pc);                         \
     SET_PC_AND_TOS(pc+skip, offset-2);                \
     DO_BACKEDGE_CHECKS(skip, branch_pc);              \
     CONTINUE;                                         \
   }
-// (+4,-1) or jump
+// (+4/+8,-1) or jump
 #define INSTR_iflt(pc,offset)                        \
   const bool cmp = (STACK_INT(-1) < 0);\
   /* Profile branch. */                               \
   BI_PROFILE_UPDATE_BRANCH(/*is_taken=*/cmp);         \
   if (cmp) {                                          \
+    PROFILE_CONDITIONAL(WITH_PROFILE, (pc)+4);        \
     int skip = (int16_t)Bytes::get_Java_u2((pc)+2);   \
     address branch_pc = (pc);                         \
     SET_PC_AND_TOS(pc+skip, offset-1);                \
     DO_BACKEDGE_CHECKS(skip, branch_pc);              \
     CONTINUE;                                         \
   }
-// (+4,-2) or jump
+// (+4/+8,-2) or jump
 #define INSTR_if_icmple(pc,offset)                    \
   const bool cmp = (STACK_INT(-2) <= STACK_INT(-1));\
   /* Profile branch. */                               \
   BI_PROFILE_UPDATE_BRANCH(/*is_taken=*/cmp);         \
   if (cmp) {                                          \
+    PROFILE_CONDITIONAL(WITH_PROFILE, (pc)+4);        \
     int skip = (int16_t)Bytes::get_Java_u2((pc)+2);   \
     address branch_pc = (pc);                         \
     SET_PC_AND_TOS(pc+skip, offset-2);                \
     DO_BACKEDGE_CHECKS(skip, branch_pc);              \
     CONTINUE;                                         \
   }
-// (+4,-1) or jump
+// (+4/+8,-1) or jump
 #define INSTR_ifle(pc,offset)                        \
   const bool cmp = (STACK_INT(-1) <= 0);\
   /* Profile branch. */                               \
   BI_PROFILE_UPDATE_BRANCH(/*is_taken=*/cmp);         \
   if (cmp) {                                          \
+    PROFILE_CONDITIONAL(WITH_PROFILE, (pc)+4);        \
     int skip = (int16_t)Bytes::get_Java_u2((pc)+2);   \
     address branch_pc = (pc);                         \
     SET_PC_AND_TOS(pc+skip, offset-1);                \
     DO_BACKEDGE_CHECKS(skip, branch_pc);              \
     CONTINUE;                                         \
   }
-// (+4,-2) or jump
+// (+4/+8,-2) or jump
 #define INSTR_if_icmpge(pc,offset)                    \
   const bool cmp = (STACK_INT(-2) >= STACK_INT(-1));\
   /* Profile branch. */                               \
   BI_PROFILE_UPDATE_BRANCH(/*is_taken=*/cmp);         \
   if (cmp) {                                          \
+    PROFILE_CONDITIONAL(WITH_PROFILE, (pc)+4);        \
     int skip = (int16_t)Bytes::get_Java_u2((pc)+2);   \
     address branch_pc = (pc);                         \
     SET_PC_AND_TOS(pc+skip, offset-2);                \
     DO_BACKEDGE_CHECKS(skip, branch_pc);              \
     CONTINUE;                                         \
   }
-// (+4,-1) or jump
+// (+4/+8,-1) or jump
 #define INSTR_ifge(pc,offset)                        \
   const bool cmp = (STACK_INT(-1) >= 0);\
   /* Profile branch. */                               \
   BI_PROFILE_UPDATE_BRANCH(/*is_taken=*/cmp);         \
   if (cmp) {                                          \
+    PROFILE_CONDITIONAL(WITH_PROFILE, (pc)+4);        \
     int skip = (int16_t)Bytes::get_Java_u2((pc)+2);   \
     address branch_pc = (pc);                         \
     SET_PC_AND_TOS(pc+skip, offset-1);                \
@@ -685,37 +704,40 @@
     CONTINUE;                                         \
   }
 
-// (+4,-2) or jump
+// (+4/+8,-2) or jump
 #define INSTR_if_acmpeq(pc,offset)                    \
- const bool cmp = (STACK_OBJECT(-2) == STACK_OBJECT(-1));\
- /* Profile branch. */                                \
- BI_PROFILE_UPDATE_BRANCH(/*is_taken=*/cmp);          \
- if (cmp) {                                           \
-   int skip = (int16_t)Bytes::get_Java_u2((pc)+2);    \
-   address branch_pc = (pc);                          \
-   SET_PC_AND_TOS(pc+skip, offset-2);                 \
-   DO_BACKEDGE_CHECKS(skip, branch_pc);               \
-   CONTINUE;                                          \
- }
-// (+4,-2) or jump
+  const bool cmp = (STACK_OBJECT(-2) == STACK_OBJECT(-1));\
+  /* Profile branch. */                               \
+  BI_PROFILE_UPDATE_BRANCH(/*is_taken=*/cmp);         \
+  if (cmp) {                                          \
+    PROFILE_CONDITIONAL(WITH_PROFILE, (pc)+4);        \
+    int skip = (int16_t)Bytes::get_Java_u2((pc)+2);   \
+    address branch_pc = (pc);                         \
+    SET_PC_AND_TOS(pc+skip, offset-2);                \
+    DO_BACKEDGE_CHECKS(skip, branch_pc);              \
+    CONTINUE;                                         \
+  }
+// (+4/+8,-2) or jump
 #define INSTR_if_acmpne(pc,offset)                    \
- const bool cmp = (STACK_OBJECT(-2) != STACK_OBJECT(-1));\
- /* Profile branch. */                                \
- BI_PROFILE_UPDATE_BRANCH(/*is_taken=*/cmp);          \
- if (cmp) {                                           \
-   int skip = (int16_t)Bytes::get_Java_u2((pc)+2);    \
-   address branch_pc = (pc);                          \
-   SET_PC_AND_TOS(pc+skip, offset-2);                 \
-   DO_BACKEDGE_CHECKS(skip, branch_pc);               \
-   CONTINUE;                                          \
- }
+  const bool cmp = (STACK_OBJECT(-2) != STACK_OBJECT(-1));\
+  /* Profile branch. */                                \
+  BI_PROFILE_UPDATE_BRANCH(/*is_taken=*/cmp);          \
+  if (cmp) {                                           \
+    PROFILE_CONDITIONAL(WITH_PROFILE, (pc)+4);         \
+    int skip = (int16_t)Bytes::get_Java_u2((pc)+2);    \
+    address branch_pc = (pc);                          \
+    SET_PC_AND_TOS(pc+skip, offset-2);                 \
+    DO_BACKEDGE_CHECKS(skip, branch_pc);               \
+    CONTINUE;                                          \
+  }
 
-// (+4,-1) or jump
+// (+4/+8,-1) or jump
 #define INSTR_ifnull(pc,offset)                       \
   const bool cmp = (STACK_OBJECT(-1) == NULL);        \
   /* Profile branch. */                               \
   BI_PROFILE_UPDATE_BRANCH(/*is_taken=*/cmp);         \
   if (cmp) {                                          \
+    PROFILE_CONDITIONAL(WITH_PROFILE, (pc)+4);        \
     int skip = (int16_t)Bytes::get_Java_u2((pc)+2);   \
     address branch_pc = (pc);                         \
     SET_PC_AND_TOS(pc+skip, offset-1);                \
@@ -723,12 +745,13 @@
     CONTINUE;                                         \
   }
 
-// (+4,-1) or jump
+// (+4/+8,-1) or jump
 #define INSTR_ifnonnull(pc,offset)                    \
   const bool cmp = (!(STACK_OBJECT(-1) == NULL));     \
   /* Profile branch. */                               \
   BI_PROFILE_UPDATE_BRANCH(/*is_taken=*/cmp);         \
   if (cmp) {                                          \
+    PROFILE_CONDITIONAL(WITH_PROFILE, (pc)+4);        \
     int skip = (int16_t)Bytes::get_Java_u2((pc)+2);   \
     address branch_pc = (pc);                         \
     SET_PC_AND_TOS(pc+skip, offset-1);                \
@@ -737,8 +760,7 @@
   }
 
 // TODO: tableswitch and lookupswitch
-// These switch types will require basically a switch builder
-// To be able to do (partial) within-superinstruction switching
+// These instructions will require some thought for profiling
 
 // (+?,+?) unconditional jump
 #define INSTR_tableswitch(pc,offset)                  \
@@ -936,7 +958,7 @@
     */                                                \
     if (rhsKlass != elemKlass && !rhsKlass->is_subtype_of(elemKlass)) {\
       BI_PROFILE_SUBTYPECHECK_FAILED(rhsKlass);       \
-      /* TODO: fix exception offset */                \
+      SET_PC_AND_TOS(pc,offset);                      \
       VM_JAVA_ERROR(vmSymbols::java_lang_ArrayStoreException(), "", note_arrayCheck_trap);\
     }                                                 \
     BI_PROFILE_UPDATE_CHECKCAST(/*null_seen=*/false, rhsKlass);\
@@ -1759,6 +1781,7 @@
   SET_STACK_ADDR(((address)(pc) - (intptr_t)(istate->method()->code_base()) + 4), offset);\
   int16_t pc_offset = (int16_t)Bytes::get_Java_u2((pc) + 2);\
   BI_PROFILE_UPDATE_JUMP();                           \
+  PROFILE_CONDITIONAL(WITH_PROFILE, (pc)+4);          \
   address branch_pc = pc;                             \
   SET_PC_AND_TOS(pc + pc_offset, offset + 1);         \
   DO_BACKEDGE_CHECKS(pc_offset, branch_pc);           \
@@ -1768,6 +1791,7 @@
 #define INSTR_goto(pc,offset)                         \
   int16_t pc_offset = (int16_t)Bytes::get_Java_u2((pc) + 2);\
   BI_PROFILE_UPDATE_JUMP();                           \
+  PROFILE_CONDITIONAL(WITH_PROFILE, (pc)+4);          \
   address branch_pc = pc;                             \
   SET_PC_AND_TOS((pc) + pc_offset, offset);           \
   DO_BACKEDGE_CHECKS(pc_offset, branch_pc);           \
@@ -1779,6 +1803,7 @@
   SET_STACK_ADDR(((address)(pc) - (intptr_t)(istate->method()->code_base()) + 6), offset);\
   int32_t pc_offset = Bytes::get_Java_u4((pc) + 2);   \
   BI_PROFILE_UPDATE_JUMP();                           \
+  PROFILE_CONDITIONAL(WITH_PROFILE, (pc)+6);          \
   address branch_pc = pc;                             \
   SET_PC_AND_TOS(pc + pc_offset, offset + 1);         \
   DO_BACKEDGE_CHECKS(pc_offset, branch_pc);           \
@@ -1788,24 +1813,15 @@
 #define INSTR_goto_w(pc,offset)                       \
   int32_t pc_offset = Bytes::get_Java_u4((pc) + 2);   \
   BI_PROFILE_UPDATE_JUMP();                           \
+  PROFILE_CONDITIONAL(WITH_PROFILE, (pc)+6);          \
   address branch_pc = pc;                             \
   SET_PC_AND_TOS(pc + pc_offset, offset);             \
   DO_BACKEDGE_CHECKS(pc_offset, branch_pc);           \
   CONTINUE;
 
 // (+?,?) jump
-#define INSTR_jsr_w(pc,offset)                        \
-  /* push return address on the stack */              \
-  SET_STACK_ADDR(((address)(pc) - (intptr_t)(istate->method()->code_base()) + 6), offset);\
-  int32_t pc_offset = Bytes::get_Java_u4((pc) + 2);   \
-  BI_PROFILE_UPDATE_JUMP();                           \
-  address branch_pc = pc;                             \
-  SET_PC_AND_TOS(pc + pc_offset, offset + 1);         \
-  DO_BACKEDGE_CHECKS(pc_offset, branch_pc);           \
-  CONTINUE;
-
-// (+?,?) jump
 #define INSTR_ret(pc,offset)                          \
+  PROFILE_CONDITIONAL(WITH_PROFILE, (pc)+2);          \
   BI_PROFILE_UPDATE_RET(/*bci=*/((int)(intptr_t)(LOCALS_ADDR((pc)[2]))));\
   SET_PC_AND_TOS(istate->method()->code_base() + (intptr_t)(LOCALS_ADDR((pc)[2])), offset);\
   CONTINUE;
@@ -1826,12 +1842,15 @@
   opcode = (jubyte)original_bytecode;                 \
   goto opcode_switch;
 
+// (+6,0) profile
+#define INSTR_profile(pc, offset)                     \
+  PROFILE_UNCONDITIONAL(pc+2);
+
 // (+?,?) invoke terminal
 #define INSTR_unimplemented(opcode)                  \
   fatal("Unimplemented opcode %d = %s", opcode,       \
         Bytecodes::name((Bytecodes::Code)opcode));    \
   goto finish;
-
 
 
 

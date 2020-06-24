@@ -1111,7 +1111,31 @@ namespace jnif {
             jsr_w = 0xc9,
             breakpoint = 0xca,
             impdep1 = 0xfe,
-            impdep2 = 0xff
+            impdep2 = 0xff,
+
+            // SI instructions for profiling
+            _profile                                                     = 238,
+            _profile_ifeq                                                = 239   , // 0xef
+            _profile_ifne                                                = 240   , // 0xf0
+            _profile_iflt                                                = 241   , // 0xf1
+            _profile_ifge                                                = 242   , // 0xf2
+            _profile_ifgt                                                = 243   , // 0xf3
+            _profile_ifle                                                = 244   , // 0xf4
+            _profile_if_icmpeq                                           = 245   , // 0xf5
+            _profile_if_icmpne                                           = 246   , // 0xf6
+            _profile_if_icmplt                                           = 247   , // 0xf7
+            _profile_if_icmpge                                           = 248   , // 0xf8
+            _profile_if_icmpgt                                           = 249   , // 0xf9
+            _profile_if_icmple                                           = 250   , // 0xfa
+            _profile_if_acmpeq                                           = 251   , // 0xfb
+            _profile_if_acmpne                                           = 252   , // 0xfc
+            _profile__goto                                               = 253   , // 0xfd
+            _profile_jsr                                                 = 254   , // 0xfe
+            _profile_ret                                                 = 255   , // 0xff
+            _profile_ifnull                                              = 256   , // 0x100
+            _profile_ifnonnull                                           = 257   , // 0x101
+            _profile_goto_w                                              = 258   , // 0x102
+            _profile_jsr_w                                               = 259   , // 0x103
         };
 
         ostream& operator<<(ostream& os, Opcode opcode);
@@ -1149,7 +1173,8 @@ namespace jnif {
             KIND_JUMP_W,
             KIND_RESERVED,
             KIND_LABEL,
-            KIND_FRAME
+            KIND_FRAME,
+            KIND_PROFILE
         };
 
 /**
@@ -1185,6 +1210,8 @@ namespace jnif {
             friend class MultiArrayInst;
 
             friend class SwitchInst;
+
+            friend class ProfileInst;
 
             friend class InstList;
 
@@ -1270,6 +1297,10 @@ namespace jnif {
 
             bool isMultiArray() const {
                 return kind == KIND_MULTIARRAY;
+            }
+
+            bool isProfile() const {
+                return kind == KIND_PROFILE;
             }
 
 //            bool isJsrOrRet() const {
@@ -1412,6 +1443,12 @@ namespace jnif {
                 return cast<MultiArrayInst>(isMultiArray(), "multiarray");
             }
 
+            class ProfileInst* profile() const {
+                return cast<ProfileInst>(isProfile(), "profile");
+            }
+
+            Opcode fullOpcode(void);
+
             set<Inst*> consumes;
             set<Inst*> produces;
             int id = 0;
@@ -1479,6 +1516,21 @@ namespace jnif {
                     Inst(opcode, KIND_ZERO, constPool) {
             }
 
+        };
+
+/**
+ *
+ */
+        class ProfileInst : public Inst {
+            friend class InstList;
+
+        public:
+
+            ProfileInst(u4 profile_id, ConstPool* constPool) :
+                    Inst(Opcode::_profile, KIND_PROFILE, constPool), profile_id(profile_id) {
+            }
+
+            const u4 profile_id;
         };
 
 /**
@@ -1553,7 +1605,7 @@ namespace jnif {
         public:
 
             JumpInst(Opcode opcode, OpKind kind, LabelInst* targetLabel, ConstPool* constPool) :
-                    Inst(opcode, kind, constPool), label2(targetLabel) {
+                    Inst(opcode, kind, constPool), label2(targetLabel), with_profile(false), profile_id(0xffffffff) {
             }
 
             JumpInst(Opcode opcode, LabelInst* targetLabel, ConstPool* constPool) :
@@ -1561,6 +1613,14 @@ namespace jnif {
             }
 
             const Inst* label2;
+
+            bool with_profile;
+            u4 profile_id;
+
+            void set_profile(u4 profile_id) {
+              this->profile_id = profile_id;
+              this->with_profile = true;
+            }
 
         };
 
@@ -1716,6 +1776,7 @@ namespace jnif {
 
         public:
 
+            Inst* def;
             vector<Inst*> targets;
 
             void addTarget(LabelInst* label) {
@@ -1725,8 +1786,8 @@ namespace jnif {
 
         private:
 
-            SwitchInst(Opcode opcode, OpKind kind, ConstPool* constPool) :
-                    Inst(opcode, kind, constPool) {
+            SwitchInst(Opcode opcode, OpKind kind, ConstPool* constPool, Inst* def) :
+                    Inst(opcode, kind, constPool), def(def) {
             }
 
         };
@@ -1740,10 +1801,9 @@ namespace jnif {
         public:
 
             TableSwitchInst(LabelInst* def, int low, int high, ConstPool* constPool) :
-                    SwitchInst(Opcode::tableswitch, KIND_TABLESWITCH, constPool), def(def), low(low), high(high) {
+                    SwitchInst(Opcode::tableswitch, KIND_TABLESWITCH, constPool, def), low(low), high(high) {
             }
 
-            Inst* def;
             int low;
             int high;
 
@@ -1758,11 +1818,9 @@ namespace jnif {
         public:
 
             LookupSwitchInst(LabelInst* def, u4 npairs, ConstPool* constPool) :
-                    SwitchInst(Opcode::lookupswitch, KIND_LOOKUPSWITCH, constPool), defbyte(def), npairs(npairs) {
+                    SwitchInst(Opcode::lookupswitch, KIND_LOOKUPSWITCH, constPool, def), npairs(npairs) {
             }
 
-
-            Inst* defbyte;
             u4 npairs;
             vector<u4> keys;
 
@@ -1816,6 +1874,8 @@ namespace jnif {
             LabelInst* addLabel(Inst* pos = nullptr);
 
             ZeroInst* addZero(Opcode opcode, Inst* pos = nullptr);
+
+            ProfileInst* addProfile(u4 profile_id, Inst* pos = nullptr);
 
             PushInst* addBiPush(u1 value, Inst* pos = nullptr);
 

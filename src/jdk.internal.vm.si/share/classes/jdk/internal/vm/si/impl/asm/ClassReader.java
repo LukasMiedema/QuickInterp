@@ -31,6 +31,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
+import jdk.internal.vm.si.impl.asm.tree.MethodNode;
 import jdk.internal.vm.si.impl.asm.util.Printer;
 
 /**
@@ -168,6 +169,12 @@ public class ClassReader {
 
 	/** The offset in bytes of the ClassFile's access_flags field. */
 	public final int header;
+	
+	/**
+	 * Indicates where in the current method the class reader is reading.
+	 * Method visitors can use this when specialized for the ClassReader.
+	 */
+	public int methodBytecodeOffset;
 
 	// -----------------------------------------------------------------------------------------------
 	// Constructors
@@ -2025,6 +2032,10 @@ public class ClassReader {
 			Label currentLabel = labels[currentBytecodeOffset];
 			if (currentLabel != null) {
 				currentLabel.accept(methodVisitor, (context.parsingOptions & SKIP_DEBUG) == 0);
+
+				// Visit the BCO
+				if (methodVisitor instanceof MethodNode)
+					((MethodNode) methodVisitor).visitBytecodeOffset(currentBytecodeOffset);
 			}
 
 			// Visit the stack map frame for this bytecode offset, if any.
@@ -2453,6 +2464,10 @@ public class ClassReader {
 			default:
 				throw new AssertionError();
 			}
+			
+			// Visit the BCO
+			if (methodVisitor instanceof MethodNode)
+				((MethodNode) methodVisitor).visitBytecodeOffset(currentBytecodeOffset);
 
 			// Visit the runtime visible instruction annotations, if any.
 			while (visibleTypeAnnotationOffsets != null
@@ -2496,6 +2511,8 @@ public class ClassReader {
 		}
 		if (labels[codeLength] != null) {
 			methodVisitor.visitLabel(labels[codeLength]);
+			if (methodVisitor instanceof MethodNode)
+				((MethodNode) methodVisitor).visitBytecodeOffset(codeLength);
 		}
 
 		// Visit LocalVariableTable and LocalVariableTypeTable attributes.

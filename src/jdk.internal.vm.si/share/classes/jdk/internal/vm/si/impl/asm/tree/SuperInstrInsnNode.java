@@ -6,11 +6,13 @@ import java.util.Objects;
 
 import jdk.internal.vm.si.impl.asm.Label;
 import jdk.internal.vm.si.impl.asm.MethodVisitor;
+import jdk.internal.vm.si.impl.bytecode.InstructionDefinition;
 
 public class SuperInstrInsnNode extends AbstractInsnNode {
 
 	private final AbstractInsnNode head;
 	private final List<AbstractInsnNode> tail;
+	private final InstructionDefinition definition;
 	
 	/**
 	 * Construct a new superinstruction node.
@@ -19,8 +21,9 @@ public class SuperInstrInsnNode extends AbstractInsnNode {
 	 * @param tail the rest of the instructions covered by this superinstruction, which will be visited immediately
 	 * following this instruction. May also be superinstructions in of themselves.
 	 */
-	public SuperInstrInsnNode(int opcode, AbstractInsnNode head, List<AbstractInsnNode> tail) {
-		super(opcode);
+	public SuperInstrInsnNode(InstructionDefinition definition, AbstractInsnNode head, List<AbstractInsnNode> tail) {
+		super(definition.getOpcode());
+		this.definition = definition;
 		this.head = Objects.requireNonNull(head);
 		this.tail = Objects.requireNonNull(tail);
 	}
@@ -120,6 +123,10 @@ public class SuperInstrInsnNode extends AbstractInsnNode {
 	@Override
 	public AbstractInsnNode clone(Map<LabelNode, LabelNode> clonedLabels) {
 		return null;
+	}
+
+	public InstructionDefinition getDefinition() {
+		return definition;
 	}
 
 }

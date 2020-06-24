@@ -6,5 +6,8 @@ module jdk.internal.vm.si {
 
 	provides ClassBytecodeFormatConverter with ClassBytecodeFormatConverterImpl;
 	
+	exports jdk.internal.vm.si.impl;
 	exports jdk.internal.vm.si.impl.bytecode;
+	exports jdk.internal.vm.si.impl.asm;
+	exports jdk.internal.vm.si.impl.asm.tree;
 }

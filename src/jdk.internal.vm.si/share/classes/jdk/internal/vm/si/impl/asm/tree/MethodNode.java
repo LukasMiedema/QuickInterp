@@ -740,4 +740,8 @@ public class MethodNode extends MethodVisitor {
 		}
 		methodVisitor.visitEnd();
 	}
+
+	public void visitBytecodeOffset(int bco) {
+		this.instructions.getLast().bytecodeOffset = bco;
+	}
 }

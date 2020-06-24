@@ -2653,7 +2653,13 @@ define_pd_global(uint64_t,MaxRAM,                    1ULL*G);
           "Start flight recording with options"))                           \
                                                                             \
   experimental(bool, UseFastUnorderedTimeStamps, false,                     \
-          "Use platform unstable time where supported for timestamps only")
+          "Use platform unstable time where supported for timestamps only") \
+                                                                            \
+  experimental(bool, UseSuperinstructions, false,                           \
+          "Enable class-load time superinstruction substitution")           \
+                                                                            \
+  experimental(bool, EnableProfiler, false,                                 \
+          "Profile all executed branches")
 
 #define VM_FLAGS(develop,                                                   \
                  develop_pd,                                                \

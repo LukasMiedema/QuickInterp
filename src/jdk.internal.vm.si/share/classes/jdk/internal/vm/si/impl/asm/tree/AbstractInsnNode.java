@@ -30,6 +30,8 @@ package jdk.internal.vm.si.impl.asm.tree;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+
+import jdk.internal.vm.si.impl.asm.ClassReader;
 import jdk.internal.vm.si.impl.asm.MethodVisitor;
 
 /**
@@ -90,9 +92,17 @@ public abstract class AbstractInsnNode {
 	
 	/** The type of {@link SuperInstrInsnNode} "instruction". */
 	public static final int SUPERINSTR_INSN = 16;
+	
+	/** The type of {@link SyntheticInsnNode} "instruction". */
+	public static final int SYNTHETIC_INSN = 17;
 
 	/** The opcode of this instruction. */
 	protected int opcode;
+	
+	/**
+	 * The bytecode offset if this was read with a {@link ClassReader}. Otherwise -1.
+	 */
+	public int bytecodeOffset = -1;
 
 	/**
 	 * The runtime visible type annotations of this instruction. This field is only
@@ -172,7 +182,7 @@ public abstract class AbstractInsnNode {
 	public AbstractInsnNode getNext() {
 		return nextInsn;
 	}
-
+	
 	/**
 	 * Makes the given method visitor visit this instruction.
 	 *

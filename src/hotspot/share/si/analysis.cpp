@@ -93,7 +93,7 @@ namespace jnif {
                 }
                 bb->last = last;
             } else if (last->isLookupSwitch()) {
-                addTarget2(bb, last->ls()->defbyte, cfg);
+                addTarget2(bb, last->ls()->def, cfg);
 
                 for (Inst* target : last->ls()->targets) {
                     addTarget2(bb, target, cfg);

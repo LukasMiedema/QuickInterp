@@ -12,6 +12,7 @@ class CodeStretcher: public StackObj {
   const char *name;
   jint data_len;
   unsigned char *data;
+  std::string unique_key;
 
 public:
   CodeStretcher(jvmtiEnv* env, const char *name, jint data_len, unsigned char *data);
@@ -21,7 +22,7 @@ public:
    * JNIF library. This performs the minimal amount of rewriting required to load the class
    * in the modified VM, but performs no superinstruction substitution.
    */
-  void rewrite_class_native(void);
+  void rewrite_class_native(bool enable_profiling);
 
   /**
    * Use the managed JVM SI service provider to perform superinstruction substitution.
@@ -40,6 +41,12 @@ public:
   void dump_to_file(std::string filename);
 
   /**
+   * Get the unique identifier of this class
+   */
+  std::string get_unique_key();
+
+private:
+  /**
    * Compute a hash for the current class. Note that the hash changes
    * after transformations. The hash is not cryptographically secure.
    */
@@ -50,6 +57,16 @@ public:
    * and the hash.
    */
   std::string compute_unique_key();
+
+  /**
+   * Insert a local execution counter profiling instruction before the given instruction.
+   */
+  void insert_lec_before(jnif::Inst *insn, jnif::Method &method);
+
+  /**
+   * Insert a local execution counter directly after a label.
+   */
+  void insert_lec_after_label(jnif::LabelInst *label, jnif::Method &method);
 };
 
 #endif
